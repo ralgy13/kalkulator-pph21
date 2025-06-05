@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Kalkulator PPh 21 Untuk Karyawan - Bulanan</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600&display=swap" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" />
+  <script src="js/xlsx.full.min.js"></script>
+  <script>
+    window.addEventListener('load', function() {
+      if (typeof XLSX !== 'undefined') {
+        console.log('XLSX library berhasil dimuat dari lokal. Versi:', XLSX.version);
+      } else {
+        console.error('XLSX library tidak dimuat. Pastikan file js/xlsx.full.min.js ada di direktori js/.');
+      }
+    });
+  </script>
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: #f0f4f8;
+    }
+    .container {
+      max-width: 900px;
+      background-color: white;
+      border-radius: 15px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+      padding: 30px;
+      margin-top: 20px;
+      margin-bottom: 20px;
+    }
+    h1 {
+      color: #1e40af;
+      font-weight: 600;
+    }
+    h2 {
+      color: #1f2937;
+      font-weight: 600;
+    }
+    .btn-primary {
+      background-color: #1e40af;
+      border-color: #1e40af;
+      transition: background-color 0.3s;
+    }
+    .btn-primary:hover {
+      background-color: #1e3a8a;
+      border-color: #1e3a8a;
+    }
+    .btn-secondary {
+      background-color: #6b7280;
+      border-color: #6b7280;
+    }
+    .btn-secondary:hover {
+      background-color: #4b5563;
+      border-color: #4b5563;
+    }
+    .btn-success {
+      background-color: #28a745;
+      border-color: #28a745;
+    }
+    .btn-success:hover {
+      background-color: #218838;
+      border-color: #1e7e34;
+    }
+    #result, #excelResult {
+      background-color: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 15px;
+      font-size: 0.9rem;
+      white-space: pre-line;
+    }
+    .form-label {
+      font-weight: 600;
+      color: #1f2937;
+      margin-bottom: 5px;
+    }
+    .form-control, .form-select {
+      border-radius: 6px;
+      border: 1px solid #d1d5db;
+      padding: 8px;
+      font-size: 0.9rem;
+      transition: border-color 0.3s, box-shadow 0.3s;
+    }
+    .form-control:focus, .form-select:focus {
+      border-color: #1e40af;
+      box-shadow: 0 0 5px rgba(30, 64, 175, 0.2);
+      outline: none;
+    }
+    .form-control:disabled, .form-control[readonly] {
+      background-color: #e9ecef;
+      color: #6b7280;
+      cursor: not-allowed;
+    }
+    .form-control::placeholder {
+      color: #adb5bd;
+      opacity: 1;
+    }
+    .form-check-input:checked {
+      background-color: #1e40af;
+      border-color: #1e40af;
+    }
+    .highlight {
+      font-weight: bold;
+      background-color: #60a5fa;
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: white;
+    }
+    .input-group {
+      margin-bottom: 15px;
+    }
+    .input-group .form-control,
+    .input-group .form-select {
+      width: 100%;
+      height: 40px;
+      font-size: 0.9rem;
+    }
+    .toggle-tooltip {
+      cursor: pointer;
+      color: #6b7280;
+      margin-left: 5px;
+      font-size: 1.2rem;
+    }
+    .toggle-tooltip:hover {
+      color: #1e40af;
+    }
+    .form-check {
+      margin-top: 10px;
+    }
+    .btn-custom-width {
+      width: 100% !important;
+      display: block;
+    }
+    @media (max-width: 768px) {
+      .container {
+        padding: 20px;
+      }
+      .form-control, .form-select {
+        font-size: 0.85rem;
+      }
+    }
+    /* Feedback Icon Style */
+    #feedbackIcon {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      cursor: pointer;
+      font-size: 40px;
+      color: #ff4444;
+    }
+    #feedbackModal {
+      display: none;
+      position: fixed;
+      bottom: 70px;
+      right: 20px;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1 class="text-center mb-3">Kalkulator PPh 21 Untuk Karyawan - Bulanan</h1>
+    <p class="text-center mb-4">Masukkan PTKP dan pendapatan bruto untuk menghitung pajak sesuai ketentuan TER, atau unggah file Excel untuk hingga 5.000 karyawan.</p>
+
+    <!-- Tombol Kembali ke Menu -->
+    <div class="mb-4">
+      <a href="index.html" class="btn btn-secondary">Kembali ke Menu</a>
+    </div>
+
+    <!-- Input untuk perhitungan tunggal -->
+    <div class="mb-5">
+      <h2 class="mb-3">Perhitungan Tunggal</h2>
+      <div class="row">
+        <!-- Grid 1: PTKP -->
+        <div class="col-md-4">
+          <div class="input-group">
+            <label class="form-label" for="status">PTKP:</label>
+            <select id="status" class="form-select">
+              <option value="">Pilih PTKP</option>
+              <option value="TK/0">TK/0</option>
+              <option value="TK/1">TK/1</option>
+              <option value="TK/2">TK/2</option>
+              <option value="TK/3">TK/3</option>
+              <option value="K/0">K/0</option>
+              <option value="K/1">K/1</option>
+              <option value="K/2">K/2</option>
+              <option value="K/3">K/3</option>
+            </select>
+          </div>
+        </div>
+        <!-- Grid 2: Pendapatan Bruto Breakdown -->
+        <div class="col-md-8">
+          <div class="input-group">
+            <label class="form-label" for="gajiPokok">Gaji Pokok (IDR):</label>
+            <input type="number" id="gajiPokok" min="0" step="1" placeholder="" class="form-control" />
+          </div>
+          <div class="input-group">
+            <label class="form-label" for="totalAllowance">Total Allowance (IDR):</label>
+            <input type="number" id="totalAllowance" min="0" step="1" placeholder="" class="form-control" />
+          </div>
+          <div class="input-group">
+            <label class="form-label" for="overtime">Overtime (IDR):</label>
+            <input type="number" id="overtime" min="0" step="1" placeholder="" class="form-control" />
+          </div>
+          <div class="input-group">
+            <label class="form-label" for="adjustment">Adjustment (IDR)<span class="toggle-tooltip" data-bs-toggle="tooltip" data-bs-placement="right" title="Bisa diisi Reimbursement, Kompensasi PKWT, Denda-denda, atau hal lain yang mempengaruhi pendapatan bruto"><i class="bi bi-info-circle"></i></span>:</label>
+            <input type="number" id="adjustment" step="1" placeholder="bisa angka negatif, lho !" class="form-control" />
+          </div>
+          <div class="input-group">
+            <label class="form-label" for="bonusThrKomisi">Bonus, THR & Komisi (IDR):</label>
+            <input type="number" id="bonusThrKomisi" min="0" step="1" placeholder="" class="form-control" />
+          </div>
+          <div class="input-group">
+            <label class="form-label" for="bpjsKesehatan">BPJS Kesehatan (IDR):</label>
+            <input type="number" id="bpjsKesehatan" min="0" step="1" placeholder="" class="form-control" />
+          </div>
+          <div class="input-group">
+            <label class="form-label" for="jkkJkm">JKK JKM (IDR):</label>
+            <input type="number" id="jkkJkm" min="0" step="1" placeholder="" class="form-control" />
+          </div>
+        </div>
+      </div>
+      <div class="form-check">
+        <input type="checkbox" id="grossUp" class="form-check-input" />
+        <label class="form-check-label" for="grossUp">Metode Gross Up (Net)</label>
+      </div>
+      <div id="result" class="mt-4">Hasil akan muncul di sini.</div>
+    </div>
+
+    <!-- Input untuk unggah Excel -->
+    <div>
+      <h2 class="mb-3">Perhitungan Banyak Karyawan</h2>
+      <div class="row mb-3">
+        <div class="col-6">
+          <button onclick="downloadTemplateExcel()" class="btn btn-success btn-custom-width">Unduh Template Excel</button>
+        </div>
+      </div>
+      <div class="mb-3">
+        <label class="form-label" for="uploadExcel">Unggah File Excel (maks. 5.000 karyawan):</label>
+        <input type="file" id="uploadExcel" accept=".xlsx,.xls" class="form-control" />
+      </div>
+      <button onclick="processExcel()" class="btn btn-primary btn-custom-width mb-3">Proses File Excel</button>
+      <div id="excelResult" class="mt-4">Hasil unggahan Excel akan muncul di sini.</div>
+    </div>
+  </div>
+
+  <!-- Icon Kritik & Saran -->
+  <div id="feedbackIcon" style="position: fixed; bottom: 20px; right: 20px; cursor: pointer;">
+    <i class="fas fa-comment" style="font-size: 40px; color: #ff4444;"></i>
+  </div>
+
+  <div id="feedbackModal" style="display: none; position: fixed; bottom: 70px; right: 20px; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
+    <h3>Kritik & Saran</h3>
+    <textarea id="feedbackText" rows="4" cols="30" placeholder="Tulis kritik/saran lo di sini..."></textarea><br>
+    <button onclick="submitFeedback()">Kirim</button>
+    <button onclick="closeFeedback()">Tutup</button>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+  <script src="https://kit.fontawesome.com/a076d05399.js"></script>
+  <script type="text/javascript">
+    var gk_isXlsx = false;
+    var gk_xlsxFileLookup = {};
+    var gk_fileData = {};
+    function filledCell(cell) {
+      return cell !== '' && cell != null;
+    }
+    function loadFileData(filename) {
+      if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+        try {
+          var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+          var firstSheetName = workbook.SheetNames[0];
+          var worksheet = workbook.Sheets[firstSheetName];
+          var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+          var filteredData = jsonData.filter(row => row.some(filledCell));
+          var headerRowIndex = filteredData.findIndex((row, index) =>
+            row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+          );
+          if (headerRowIndex === -1 || headerRowIndex > 25) {
+            headerRowIndex = 0;
+          }
+          var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex));
+          csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+          return csv;
+        } catch (e) {
+          console.error(e);
+          return "";
+        }
+      }
+      return gk_fileData[filename] || "";
+    }
+  </script>
+  <script>
+    const tarifTER = {
+      A: [
+        { batas: 5400000, tarif: 0 },
+        { batas: 5650000, tarif: 0.0025 },
+        { batas: 5950000, tarif: 0.005 },
+        { batas: 6300000, tarif: 0.0075 },
+        { batas: 6750000, tarif: 0.01 },
+        { batas: 7500000, tarif: 0.0125 },
+        { batas: 8550000, tarif: 0.015 },
+        { batas: 9650000, tarif: 0.0175 },
+        { batas: 10050000, tarif: 0.02 },
+        { batas: 10350000, tarif: 0.0225 },
+        { batas: 10700000, tarif: 0.025 },
+        { batas: 11050000, tarif: 0.03 },
+        { batas: 11600000, tarif: 0.035 },
+        { batas: 12500000, tarif: 0.04 },
+        { batas: 13750000, tarif: 0.05 },
+        { batas: 15100000, tarif: 0.06 },
+        { batas: 16950000, tarif: 0.07 },
+        { batas: 19750000, tarif: 0.08 },
+        { batas: 24150000, tarif: 0.09 },
+        { batas: 26450000, tarif: 0.1 },
+        { batas: 28000000, tarif: 0.11 },
+        { batas: 30050000, tarif: 0.12 },
+        { batas: 32400000, tarif: 0.13 },
+        { batas: 35400000, tarif: 0.14 },
+        { batas: 39100000, tarif: 0.15 },
+        { batas: 43850000, tarif: 0.16 },
+        { batas: 47800000, tarif: 0.17 },
+        { batas: 51400000, tarif: 0.18 },
+        { batas: 56300000, tarif: 0.19 },
+        { batas: 62200000, tarif: 0.2 },
+        { batas: 68600000, tarif: 0.21 },
+        { batas: 77500000, tarif: 0.22 },
+        { batas: 89000000, tarif: 0.23 },
+        { batas: 103000000, tarif: 0.24 },
+        { batas: 125000000, tarif: 0.25 },
+        { batas: 157000000, tarif: 0.26 },
+        { batas: 206000000, tarif: 0.27 },
+        { batas: 337000000, tarif: 0.28 },
+        { batas: 454000000, tarif: 0.29 },
+        { batas: 550000000, tarif: 0.3 },
+        { batas: 695000000, tarif: 0.31 },
+        { batas: 910000000, tarif: 0.32 },
+        { batas: 1400000000, tarif: 0.33 },
+        { batas: Infinity, tarif: 0.34 }
+      ],
+      B: [
+        { batas: 6200000, tarif: 0 },
+        { batas: 6500000, tarif: 0.0025 },
+        { batas: 6850000, tarif: 0.005 },
+        { batas: 7300000, tarif: 0.0075 },
+        { batas: 9200000, tarif: 0.01 },
+        { batas: 10750000, tarif: 0.015 },
+        { batas: 11250000, tarif: 0.02 },
+        { batas: 11600000, tarif: 0.025 },
+        { batas: 12600000, tarif: 0.03 },
+        { batas: 13600000, tarif: 0.04 },
+        { batas: 14950000, tarif: 0.05 },
+        { batas: 16400000, tarif: 0.06 },
+        { batas: 18450000, tarif: 0.07 },
+        { batas: 21850000, tarif: 0.08 },
+        { batas: 26000000, tarif: 0.09 },
+        { batas: 27700000, tarif: 0.1 },
+        { batas: 29350000, tarif: 0.11 },
+        { batas: 31450000, tarif: 0.12 },
+        { batas: 33950000, tarif: 0.13 },
+        { batas: 37100000, tarif: 0.14 },
+        { batas: 41100000, tarif: 0.15 },
+        { batas: 45800000, tarif: 0.16 },
+        { batas: 49500000, tarif: 0.17 },
+        { batas: 53800000, tarif: 0.18 },
+        { batas: 58500000, tarif: 0.19 },
+        { batas: 64000000, tarif: 0.2 },
+        { batas: 71000000, tarif: 0.21 },
+        { batas: 80000000, tarif: 0.22 },
+        { batas: 93000000, tarif: 0.23 },
+        { batas: 109000000, tarif: 0.24 },
+        { batas: 129000000, tarif: 0.25 },
+        { batas: 163000000, tarif: 0.26 },
+        { batas: 211000000, tarif: 0.27 },
+        { batas: 374000000, tarif: 0.28 },
+        { batas: 459000000, tarif: 0.29 },
+        { batas: 555000000, tarif: 0.3 },
+        { batas: 704000000, tarif: 0.31 },
+        { batas: 957000000, tarif: 0.32 },
+        { batas: 1405000000, tarif: 0.33 },
+        { batas: Infinity, tarif: 0.34 }
+      ],
+      C: [
+        { batas: 6600000, tarif: 0 },
+        { batas: 6950000, tarif: 0.0025 },
+        { batas: 7350000, tarif: 0.005 },
+        { batas: 7800000, tarif: 0.0075 },
+        { batas: 8850000, tarif: 0.01 },
+        { batas: 9800000, tarif: 0.0125 },
+        { batas: 10950000, tarif: 0.015 },
+        { batas: 11200000, tarif: 0.0175 },
+        { batas: 12050000, tarif: 0.02 },
+        { batas: 12950000, tarif: 0.03 },
+        { batas: 14150000, tarif: 0.04 },
+        { batas: 15550000, tarif: 0.05 },
+        { batas: 17050000, tarif: 0.06 },
+        { batas: 19500000, tarif: 0.07 },
+        { batas: 22700000, tarif: 0.08 },
+        { batas: 26600000, tarif: 0.09 },
+        { batas: 28100000, tarif: 0.1 },
+        { batas: 30100000, tarif: 0.11 },
+        { batas: 32600000, tarif: 0.12 },
+        { batas: 35400000, tarif: 0.13 },
+        { batas: 38900000, tarif: 0.14 },
+        { batas: 43000000, tarif: 0.15 },
+        { batas: 47400000, tarif: 0.16 },
+        { batas: 51200000, tarif: 0.17 },
+        { batas: 55800000, tarif: 0.18 },
+        { batas: 60400000, tarif: 0.19 },
+        { batas: 66700000, tarif: 0.2 },
+        { batas: 74500000, tarif: 0.21 },
+        { batas: 83200000, tarif: 0.22 },
+        { batas: 95600000, tarif: 0.23 },
+        { batas: 110000000, tarif: 0.24 },
+        { batas: 134000000, tarif: 0.25 },
+        { batas: 169000000, tarif: 0.26 },
+        { batas: 221000000, tarif: 0.27 },
+        { batas: 390000000, tarif: 0.28 },
+        { batas: 463000000, tarif: 0.29 },
+        { batas: 561000000, tarif: 0.3 },
+        { batas: 709000000, tarif: 0.31 },
+        { batas: 965000000, tarif: 0.32 },
+        { batas: 1419000000, tarif: 0.33 },
+        { batas: Infinity, tarif: 0.34 }
+      ]
+    };
+
+    const validPTKP = ['TK/0', 'TK/1', 'TK/2', 'TK/3', 'K/0', 'K/1', 'K/2', 'K/3'];
+    const validMetode = ['Gross', 'Gross Up'];
+    const API_URL = 'http://localhost:3000';
+
+    function checkBrowserCompatibility() {
+      if (!window.FileReader) {
+        alert('Browser Anda tidak mendukung operasi file. Silakan gunakan browser modern seperti Chrome, Firefox, atau Edge.');
+        return false;
+      }
+      return true;
+    }
+
+    function hitungTarifEfektif(gross, kategori) {
+      const list = tarifTER[kategori];
+      for (let i = 0; i < list.length; i++) {
+        if (gross <= list[i].batas) return list[i].tarif;
+      }
+      return 0;
+    }
+
+    function hitungPendapatanBruto() {
+      const gajiPokok = parseFloat(document.getElementById('gajiPokok').value) || 0;
+      const totalAllowance = parseFloat(document.getElementById('totalAllowance').value) || 0;
+      const overtime = parseFloat(document.getElementById('overtime').value) || 0;
+      const adjustment = parseFloat(document.getElementById('adjustment').value) || 0;
+      const bonusThrKomisi = parseFloat(document.getElementById('bonusThrKomisi').value) || 0;
+      const bpjsKesehatan = parseFloat(document.getElementById('bpjsKesehatan').value) || 0;
+      const jkkJkm = parseFloat(document.getElementById('jkkJkm').value) || 0;
+
+      return Math.round(gajiPokok + totalAllowance + overtime + adjustment + bonusThrKomisi + bpjsKesehatan + jkkJkm);
+    }
+
+    function hitungPajakSingle() {
+      const pendapatan = hitungPendapatanBruto();
+      const status = document.getElementById('status').value;
+      const isGrossUp = document.getElementById('grossUp').checked;
+      const resultEl = document.getElementById('result');
+
+      if (!status) {
+        resultEl.textContent = 'Silakan pilih PTKP.';
+        return;
+      }
+
+      if (pendapatan < 0) {
+        resultEl.textContent = 'Pendapatan bruto tidak boleh negatif. Periksa input Anda.';
+        return;
+      }
+
+      let kategori = '';
+      if (['TK/0', 'TK/1', 'K/0'].includes(status)) kategori = 'A';
+      else if (['TK/2', 'TK/3', 'K/1', 'K/2'].includes(status)) kategori = 'B';
+      else if (status === 'K/3') kategori = 'C';
+
+      if (!isGrossUp) {
+        const tarif = hitungTarifEfektif(pendapatan, kategori);
+        const pajak = Math.floor(pendapatan * tarif); // Round down
+        resultEl.innerHTML =
+          `Pendapatan Bruto\t\t\t: Rp ${pendapatan.toLocaleString('id-ID')}\n` +
+          `PTKP\t\t\t\t\t\t: ${status}\n` +
+          `Kategori TER\t\t\t\t: ${kategori}\n` +
+          `Tarif Efektif\t\t\t\t: ${(tarif * 100).toFixed(2)}%\n` +
+          `Pajak Bulanan\t\t\t\t: <span class="highlight">Rp ${pajak.toLocaleString('id-ID')}</span>`;
+        return;
+      }
+
+      let low = 0, high = pendapatan * 5, mid, allowance = 0, pajak = 0, iter = 0;
+      const tol = 1;
+
+      while (iter++ < 100) {
+        mid = (low + high) / 2;
+        const gross = pendapatan + mid;
+        const tarif = hitungTarifEfektif(gross, kategori);
+        pajak = Math.floor(gross * tarif); // Round down setiap iterasi
+
+        if (Math.abs(pajak - mid) <= tol) {
+          allowance = mid;
+          break;
+        }
+        if (pajak > mid) low = mid;
+        else high = mid;
+      }
+
+      const tarif = hitungTarifEfektif(pendapatan + allowance, kategori);
+      const roundedPajak = Math.floor(pajak); // Round down lagi untuk pastiin
+
+      resultEl.innerHTML =
+        `Pendapatan Bruto\t\t\t: Rp ${pendapatan.toLocaleString('id-ID')}\n` +
+        `PTKP\t\t\t\t\t\t: ${status}\n` +
+        `Kategori TER\t\t\t\t: ${kategori}\n` +
+        `Tarif Efektif\t\t\t\t: ${(tarif * 100).toFixed(2)}%\n` +
+        `Pajak Bulanan\t\t\t\t: <span class="highlight">Rp ${roundedPajak.toLocaleString('id-ID')}</span>\n` +
+        `Tunjangan Pajak\t\t\t: Rp ${roundedPajak.toLocaleString('id-ID')}`;
+    }
+
+    function validateRow(row, index) {
+      const errors = [];
+      if (!row.Nama || typeof row.Nama !== 'string' || row.Nama.trim() === '') {
+        errors.push(`Baris ${index + 1}: Nama tidak valid atau kosong.`);
+      }
+      if (!validPTKP.includes(row.PTKP)) {
+        errors.push(`Baris ${index + 1}: PTKP harus salah satu dari ${validPTKP.join(', ')}.`);
+      }
+      const pendapatanFields = ['Gaji_Pokok', 'Total_Allowance', 'Overtime', 'Adjustment', 'Bonus_THR_Komisi', 'BPJS_Kesehatan', 'JKK_JKM'];
+      pendapatanFields.forEach(field => {
+        if (!(field in row)) {
+          errors.push(`Baris ${index + 1}: Kolom ${field} tidak ditemukan.`);
+        } else {
+          const value = parseFloat(row[field]);
+          if (isNaN(value)) {
+            errors.push(`Baris ${index + 1}: ${field} bukan angka valid (nilai: '${row[field]}'). Pastikan sel bertipe Number, bukan Text.`);
+          } else if (field !== 'Adjustment' && value < 0) {
+            errors.push(`Baris ${index + 1}: ${field} harus angka positif (nilai: ${value}).`);
+          }
+        }
+      });
+      if (!validMetode.includes(row.Metode)) {
+        errors.push(`Baris ${index + 1}: Metode harus 'Gross' atau 'Gross Up'.`);
+      }
+      return errors;
+    }
+
+    function hitungPajakExcel(row) {
+      const gajiPokok = parseFloat(row.Gaji_Pokok) || 0;
+      const totalAllowance = parseFloat(row.Total_Allowance) || 0;
+      const overtime = parseFloat(row.Overtime) || 0;
+      const adjustment = parseFloat(row.Adjustment) || 0;
+      const bonusThrKomisi = parseFloat(row.Bonus_THR_Komisi) || 0;
+      const bpjsKesehatan = parseFloat(row.BPJS_Kesehatan) || 0;
+      const jkkJkm = parseFloat(row.JKK_JKM) || 0;
+
+      const pendapatan = Math.round(gajiPokok + totalAllowance + overtime + adjustment + bonusThrKomisi + bpjsKesehatan + jkkJkm);
+      const status = row.PTKP;
+      const isGrossUp = row.Metode === 'Gross Up';
+
+      let kategori = '';
+      if (['TK/0', 'TK/1', 'K/0'].includes(status)) kategori = 'A';
+      else if (['TK/2', 'TK/3', 'K/1', 'K/2'].includes(status)) kategori = 'B';
+      else if (status === 'K/3') kategori = 'C';
+
+      if (!isGrossUp) {
+        const tarif = hitungTarifEfektif(pendapatan, kategori);
+        const pajak = Math.floor(pendapatan * tarif); // Round down
+        return {
+          Nama: row.Nama,
+          PTKP: row.PTKP,
+          Gaji_Pokok: gajiPokok,
+          Total_Allowance: totalAllowance,
+          Overtime: overtime,
+          Adjustment: adjustment,
+          Bonus_THR_Komisi: bonusThrKomisi,
+          BPJS_Kesehatan: bpjsKesehatan,
+          JKK_JKM: jkkJkm,
+          Pendapatan_Bruto: pendapatan,
+          Metode: row.Metode,
+          Kategori_TER: kategori,
+          Tarif_Efektif: (tarif * 100).toFixed(2),
+          Pajak_Bulanan: pajak,
+          Tunjangan_Pajak: 0
+        };
+      }
+
+      let low = 0, high = pendapatan * 5, mid, allowance = 0, pajak = 0, iter = 0;
+      const tol = 1;
+
+      while (iter++ < 100) {
+        mid = (low + high) / 2;
+        const gross = pendapatan + mid;
+        const tarif = hitungTarifEfektif(gross, kategori);
+        pajak = Math.floor(gross * tarif); // Round down setiap iterasi
+
+        if (Math.abs(pajak - mid) <= tol) {
+          allowance = mid;
+          break;
+        }
+        if (pajak > mid) low = mid;
+        else high = mid;
+      }
+
+      const tarif = hitungTarifEfektif(pendapatan + allowance, kategori);
+      const roundedPajak = Math.floor(pajak); // Round down lagi untuk pastiin
+
+      return {
+        Nama: row.Nama,
+        PTKP: row.PTKP,
+        Gaji_Pokok: gajiPokok,
+        Total_Allowance: totalAllowance,
+        Overtime: overtime,
+        Adjustment: adjustment,
+        Bonus_THR_Komisi: bonusThrKomisi,
+        BPJS_Kesehatan: bpjsKesehatan,
+        JKK_JKM: jkkJkm,
+        Pendapatan_Bruto: pendapatan,
+        Metode: row.Metode,
+        Kategori_TER: kategori,
+        Tarif_Efektif: (tarif * 100).toFixed(2),
+        Pajak_Bulanan: roundedPajak,
+        Tunjangan_Pajak: roundedPajak
+      };
+    }
+
+    function processExcel() {
+      if (!checkBrowserCompatibility()) return;
+      const fileInput = document.getElementById('uploadExcel');
+      const excelResultEl = document.getElementById('excelResult');
+      const file = fileInput.files[0];
+
+      if (!file) {
+        excelResultEl.textContent = 'Silakan unggah file Excel.';
+        return;
+      }
+
+      if (typeof XLSX === 'undefined') {
+        excelResultEl.textContent = 'Gagal memuat library Excel. Pastikan file js/xlsx.full.min.js ada di direktori js/.';
+        console.error('XLSX library not loaded. Pastikan file js/xlsx.full.min.js ada.');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const data = new Uint8Array(event.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const sheet = workbook.Sheets[workbook.SheetNames[0]];
+          const jsonData = XLSX.utils.sheet_to_json(sheet, { raw: false, defval: '' });
+
+          if (jsonData.length === 0) {
+            excelResultEl.textContent = 'File Excel kosong.';
+            return;
+          }
+
+          if (jsonData.length > 5000) {
+            excelResultEl.textContent = 'File melebihi batas maksimum 5.000 karyawan. Silakan kurangi jumlah baris.';
+            return;
+          }
+
+          const errors = [];
+          jsonData.forEach((row, index) => {
+            const rowErrors = validateRow(row, index);
+            errors.push(...rowErrors);
+          });
+
+          if (errors.length > 0) {
+            excelResultEl.textContent = 'Kesalahan validasi:\n' + errors.join('\n');
+            return;
+          }
+
+          const hasil = jsonData.map((row, index) => {
+            try {
+              return hitungPajakExcel(row);
+            } catch (e) {
+              errors.push(`Baris ${index + 1}: Gagal menghitung pajak: ${e.message}`);
+              return null;
+            }
+          });
+
+          if (errors.length > 0) {
+            excelResultEl.textContent = 'Kesalahan perhitungan:\n' + errors.join('\n');
+            return;
+          }
+
+          const validHasil = hasil.filter(row => row && typeof row === 'object' && 
+            row.Nama && row.PTKP && 
+            row.Gaji_Pokok !== undefined && row.Total_Allowance !== undefined && 
+            row.Overtime !== undefined && row.Adjustment !== undefined && 
+            row.Bonus_THR_Komisi !== undefined && row.BPJS_Kesehatan !== undefined && 
+            row.JKK_JKM !== undefined && row.Pendapatan_Bruto !== undefined && 
+            row.Metode && row.Kategori_TER && row.Tarif_Efektif !== undefined && 
+            row.Pajak_Bulanan !== undefined && row.Tunjangan_Pajak !== undefined);
+
+          if (validHasil.length !== hasil.length) {
+            console.error('Data hasil tidak valid:', hasil);
+            excelResultEl.textContent = 'Gagal mengekspor: Data hasil mengandung baris tidak valid. Periksa konsol untuk detail.';
+            return;
+          }
+
+          console.log('Data hasil untuk ekspor:', validHasil);
+
+          excelResultEl.innerHTML =
+            `Jumlah Karyawan: ${validHasil.length}\n` +
+            `File berhasil diproses. Klik tombol di bawah untuk unduh hasil (format Excel).`;
+
+          const downloadButton = document.createElement('button');
+          downloadButton.textContent = 'Download Hasil Perhitungan';
+          downloadButton.className = 'btn btn-success w-100 mt-3';
+          downloadButton.onclick = () => {
+            try {
+              const ws = XLSX.utils.json_to_sheet(validHasil);
+              const wb = XLSX.utils.book_new();
+              XLSX.utils.book_append_sheet(wb, ws, 'Hasil Perhitungan');
+              XLSX.writeFile(wb, 'hasil_pph21_bulanan.xlsx');
+            } catch (e) {
+              alert('Gagal membuat file hasil: ' + e.message);
+            }
+          };
+          excelResultEl.appendChild(downloadButton);
+        } catch (e) {
+          excelResultEl.textContent = 'Gagal memproses file Excel: ' + e.message;
+          console.error('Error in processExcel:', e);
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    function downloadTemplateExcel() {
+      if (typeof XLSX === 'undefined') {
+        alert('Gagal memuat library Excel. Pastikan file js/xlsx.full.min.js ada di direktori js/.');
+        return;
+      }
+
+      const headers = [
+        'Nama', 'PTKP', 'Metode', 'Gaji_Pokok', 'Total_Allowance', 'Overtime',
+        'Adjustment', 'Bonus_THR_Komisi', 'BPJS_Kesehatan', 'JKK_JKM'
+      ];
+
+      const exampleData = [
+        {
+          Nama: 'Karyawan1',
+          PTKP: 'K/1',
+          Metode: 'Gross',
+          Gaji_Pokok: 5000000,
+          Total_Allowance: 2000000,
+          Overtime: 500000,
+          Adjustment: 100000,
+          Bonus_THR_Komisi: 1000000,
+          BPJS_Kesehatan: 200000,
+          JKK_JKM: 100000
+        },
+        {
+          Nama: 'Karyawan2',
+          PTKP: 'TK/2',
+          Metode: 'Gross Up',
+          Gaji_Pokok: 6000000,
+          Total_Allowance: 2500000,
+          Overtime: 600000,
+          Adjustment: 150000,
+          Bonus_THR_Komisi: 1200000,
+          BPJS_Kesehatan: 250000,
+          JKK_JKM: 120000
+        },
+        {
+          Nama: 'Karyawan3',
+          PTKP: 'K/0',
+          Metode: 'Gross',
+          Gaji_Pokok: 4500000,
+          Total_Allowance: 1800000,
+          Overtime: 400000,
+          Adjustment: 80000,
+          Bonus_THR_Komisi: 900000,
+          BPJS_Kesehatan: 180000,
+          JKK_JKM: 90000
+        }
+      ];
+
+      const ws = XLSX.utils.json_to_sheet(exampleData, { header: headers });
+
+      // Atur lebar kolom (opsional)
+      if (!ws['!cols']) ws['!cols'] = [];
+      ws['!cols'] = headers.map(() => ({ wch: 15 }));
+
+      // Pastikan range sheet mencakup semua data
+      if (!ws['!ref']) ws['!ref'] = 'A1:J4';
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Template');
+
+      XLSX.writeFile(wb, 'template_pph21_bulanan.xlsx');
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+      [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+    });
+
+    document.getElementById('gajiPokok').addEventListener('input', hitungPajakSingle);
+    document.getElementById('totalAllowance').addEventListener('input', hitungPajakSingle);
+    document.getElementById('overtime').addEventListener('input', hitungPajakSingle);
+    document.getElementById('adjustment').addEventListener('input', hitungPajakSingle);
+    document.getElementById('bonusThrKomisi').addEventListener('input', hitungPajakSingle);
+    document.getElementById('bpjsKesehatan').addEventListener('input', hitungPajakSingle);
+    document.getElementById('jkkJkm').addEventListener('input', hitungPajakSingle);
+    document.getElementById('status').addEventListener('change', hitungPajakSingle);
+    document.getElementById('grossUp').addEventListener('change', hitungPajakSingle);
+
+    // Feedback functions
+    document.getElementById('feedbackIcon').addEventListener('click', () => {
+      document.getElementById('feedbackModal').style.display = 'block';
+    });
+
+    function closeFeedback() {
+      document.getElementById('feedbackModal').style.display = 'none';
+    }
+
+    async function submitFeedback() {
+      const feedback = document.getElementById('feedbackText').value;
+      if (!feedback) {
+        alert('Tulis kritik/saran dulu, bro!');
+        return;
+      }
+      try {
+        const res = await fetch(`${API_URL}/feedback`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ feedback })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          alert('Terima kasih atas sarannya!');
+          closeFeedback();
+        } else {
+          alert(data.error || 'Gagal kirim.');
+        }
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    }
+  </script>
+</body>
+</html>
