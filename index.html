@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Kalkulator PPh 21 Untuk Karyawan - Menu Utama</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600&display=swap" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" />
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: #f0f4f8;
+    }
+    .container {
+      max-width: 600px;
+      background-color: white;
+      border-radius: 15px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+      padding: 30px;
+      margin-top: 50px;
+      margin-bottom: 20px;
+    }
+    h1 {
+      color: #1e40af;
+      font-weight: 600;
+    }
+    .btn-primary {
+      background-color: #1e40af;
+      border-color: #1e40af;
+      transition: background-color 0.3s;
+    }
+    .btn-primary:hover {
+      background-color: #1e3a8a;
+      border-color: #1e3a8a;
+    }
+    .navbar {
+      padding: 10px 20px;
+    }
+    .navbar-brand {
+      font-weight: 600;
+      color: #1e40af;
+    }
+    .dropdown-menu {
+      min-width: 150px;
+    }
+    .dropdown-item {
+      font-size: 0.9rem;
+    }
+    .dropdown-item:hover {
+      background-color: #f0f4f8;
+    }
+    #feedbackIcon {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      cursor: pointer;
+      font-size: 40px;
+      color: #ff4444;
+      z-index: 1000;
+    }
+    #feedbackModal {
+      display: none;
+      position: fixed;
+      bottom: 70px;
+      right: 20px;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      z-index: 1000;
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg navbar-light">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="#">Kalkulator PPh 21</a>
+      <div class="ms-auto d-flex align-items-center">
+        <div id="authSection">
+          <a href="donate.html" class="btn btn-outline-success me-2">Donate Me :)</a>
+          <button class="btn btn-outline-primary me-2" onclick="login()">Login</button>
+          <button class="btn btn-primary" onclick="signup()">Sign Up</button>
+        </div>
+        <div id="userSection" style="display: none;">
+          <div class="dropdown">
+            <button class="btn btn-primary dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+              <span id="userEmail">User</span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+              <li><a class="dropdown-item" href="#" onclick="checkSubscription()">Status Langganan</a></li>
+              <li><a class="dropdown-item" href="#" onclick="logout()">Logout</a></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="modal fade" id="loginModal" tabindex="-1" aria-labelledby="loginModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="loginModalLabel">Login</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p>Fitur ini masih dalam pengembangan :)</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="signupModal" tabindex="-1" aria-labelledby="signupModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="signupModalLabel">Sign Up</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p>Fitur ini masih dalam pengembangan :)</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="subscriptionModal" tabindex="-1" aria-labelledby="subscriptionModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="subscriptionModalLabel">Status Langganan</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p>Status Langganan Anda: <span id="subscriptionStatus">Gratis (Sementara)</span></p>
+          <button id="subscribeButton" class="btn btn-primary" style="display: none;">Berlangganan Sekarang</button>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <h1 class="text-center mb-4">Kalkulator PPh 21 Untuk Karyawan</h1>
+    <p class="text-muted text-center mb-4">Pilih perhitungan PPh 21 yang Anda inginkan.</p>
+    <div class="d-grid gap-3">
+      <a href="pph21_bulanan.html" class="btn btn-primary btn-lg">PPh 21 Bulanan</a>
+      <a href="pph21_desember.html" class="btn btn-primary btn-lg">PPh 21 Desember / Resign di Tengah Bulan</a>
+    </div>
+  </div>
+
+  <div id="feedbackIcon" style="position: fixed; bottom: 20px; right: 20px; cursor: pointer;">
+    <i class="bi bi-chat-dots" style="font-size: 40px; color: #ff4444;"></i>
+  </div>
+
+  <div id="feedbackModal" style="display: none; position: fixed; bottom: 70px; right: 20px; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
+    <h3>Kritik & Saran</h3>
+    <textarea id="feedbackText" rows="4" cols="30" placeholder="Tulis kritik/saran lo di sini..."></textarea><br>
+    <button onclick="submitFeedback()">Kirim</button>
+    <button onclick="closeFeedback()">Tutup</button>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+  <script>
+    const API_URL = 'http://localhost:3000';
+
+    document.addEventListener('DOMContentLoaded', () => {
+      // Hapus cek token karena gak butuh login
+    });
+
+    function login() {
+      new bootstrap.Modal(document.getElementById('loginModal')).show();
+    }
+
+    function signup() {
+      new bootstrap.Modal(document.getElementById('signupModal')).show();
+    }
+
+    function logout() {
+      // Gak perlu fungsi ini
+    }
+
+    function checkSubscription() {
+      new bootstrap.Modal(document.getElementById('subscriptionModal')).show();
+    }
+
+    function subscribe() {
+      // Gak perlu fungsi ini
+    }
+
+    document.getElementById('feedbackIcon').addEventListener('click', () => {
+      document.getElementById('feedbackModal').style.display = 'block';
+    });
+
+    function closeFeedback() {
+      document.getElementById('feedbackModal').style.display = 'none';
+    }
+
+    async function submitFeedback() {
+      const feedback = document.getElementById('feedbackText').value;
+      const email = prompt('Masukkan email lo (opsional):') || 'Anonymous';
+      if (!feedback) {
+        alert('Tulis kritik/saran dulu, bro!');
+        return;
+      }
+      try {
+        const res = await fetch(`${API_URL}/feedback`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ feedback, email })
+        });
+        if (!res.ok) {
+          const errorData = await res.json();
+          throw new Error(errorData.error || `HTTP error! Status: ${res.status}`);
+        }
+        const data = await res.json();
+        alert('Terima kasih atas sarannya!');
+        closeFeedback();
+      } catch (err) {
+        console.error('Submit feedback error:', err);
+        alert(`Gagal kirim feedback: ${err.message}. Cek koneksi atau hubungi admin.`);
+      }
+    }
+  </script>
+</body>
+</html>
