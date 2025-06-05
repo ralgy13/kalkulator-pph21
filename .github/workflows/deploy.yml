@@ -6,10 +6,19 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Izin buat write ke repo
+      pages: write     # Izin buat GitHub Pages
+      id-token: write  # Izin buat token
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+      - name: Setup Git Config
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
       - name: Deploy
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           folder: public
+          token: ${{ secrets.GITHUB_TOKEN }}
