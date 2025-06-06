@@ -20,5 +20,5 @@ jobs:
       - name: Deploy
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          folder: public
+          folder: . # Ganti dari "public" jadi "." (root repo)
           token: ${{ secrets.GITHUB_TOKEN }}
