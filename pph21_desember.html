@@ -148,25 +148,6 @@
         width: 100px;
       }
     }
-    /* Feedback Icon Style */
-    #feedbackIcon {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      cursor: pointer;
-      font-size: 40px;
-      color: #ff4444;
-    }
-    #feedbackModal {
-      display: none;
-      position: fixed;
-      bottom: 70px;
-      right: 20px;
-      background: white;
-      padding: 20px;
-      border-radius: 10px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    }
   </style>
 </head>
 <body>
@@ -316,20 +297,7 @@
     </div>
   </div>
 
-  <!-- Icon Kritik & Saran -->
-  <div id="feedbackIcon" style="position: fixed; bottom: 20px; right: 20px; cursor: pointer;">
-    <i class="fas fa-comment" style="font-size: 40px; color: #ff4444;"></i>
-  </div>
-
-  <div id="feedbackModal" style="display: none; position: fixed; bottom: 70px; right: 20px; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
-    <h3>Kritik & Saran</h3>
-    <textarea id="feedbackText" rows="4" cols="30" placeholder="Tulis kritik/saran lo di sini..."></textarea><br>
-    <button onclick="submitFeedback()">Kirim</button>
-    <button onclick="closeFeedback()">Tutup</button>
-  </div>
-
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
-  <script src="https://kit.fontawesome.com/a076d05399.js"></script>
   <script type="text/javascript">
     var gk_isXlsx = false;
     var gk_xlsxFileLookup = {};
@@ -367,147 +335,196 @@
       { batas: 60000000, tarif: 0.05 },
       { batas: 250000000, tarif: 0.15 },
       { batas: 500000000, tarif: 0.25 },
-      { batas: 5000000000, tarif: 0.30 },
-      { batas: Infinity, tarif: 0.35 }
+      { batas: Infinity, tarif: 0.30 }
     ];
 
-    const validPTKP = ['TK/0', 'TK/1', 'TK/2', 'TK/3', 'K/0', 'K/1', 'K/2', 'K/3'];
-    const validMetode = ['Gross', 'Gross Up'];
-    const API_URL = 'http://localhost:3000';
+    const ptkpValues = {
+      'TK/0': 54000000,
+      'TK/1': 58500000,
+      'TK/2': 63000000,
+      'TK/3': 67500000,
+      'K/0': 58500000,
+      'K/1': 63000000,
+      'K/2': 67500000,
+      'K/3': 72000000
+    };
 
-    function checkBrowserCompatibility() {
-      if (!window.FileReader) {
-        alert('Browser Anda tidak mendukung operasi file. Silakan gunakan browser modern seperti Chrome, Firefox, atau Edge.');
-        return false;
+    const bulanList = [
+      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+    ];
+
+    const validMetode = ['Gross', 'Gross Up'];
+
+    function updateUnitLabels() {
+      const bulanMulai = document.getElementById('bulanMulai').value;
+      const bulanSelesai = document.getElementById('bulanSelesai').value;
+      const bulanBekerja = hitungBulanBekerja(bulanMulai, bulanSelesai);
+
+      const units = [
+        { id: 'gajiUnit', default: 'IDR' },
+        { id: 'totalAllowanceUnit', default: 'IDR' },
+        { id: 'bpjsKesehatanUnit', default: 'IDR' },
+        { id: 'jkkJkmUnit', default: 'IDR' },
+        { id: 'jhtUnit', default: 'IDR' },
+        { id: 'jpUnit', default: 'IDR' },
+        { id: 'overtimeUnit', default: 'IDR' },
+        { id: 'bonusThrKomisiUnit', default: 'IDR' },
+        { id: 'adjustmentUnit', default: 'IDR' },
+        { id: 'benefitInKindUnit', default: 'IDR' },
+        { id: 'biayaJabatanUnit', default: 'IDR' }
+      ];
+
+      if (bulanMulai && bulanSelesai) {
+        units.forEach(u => document.getElementById(u.id).textContent = `(${bulanMulai.slice(0, 3)}-${bulanSelesai.slice(0, 3)})`);
+      } else {
+        units.forEach(u => document.getElementById(u.id).textContent = `(${u.default})`);
       }
-      return true;
+
+      const pphSebelumnyaUnit = document.getElementById('pphSebelumnyaUnit');
+      if (bulanMulai && bulanSelesai) {
+        const startIdx = bulanList.indexOf(bulanMulai);
+        const endIdx = bulanList.indexOf(bulanSelesai);
+        if (startIdx !== -1 && endIdx !== -1 && endIdx > 0) {
+          const prevBulanSelesai = bulanList[endIdx - 1];
+          pphSebelumnyaUnit.textContent = `(${bulanMulai.slice(0, 3)}-${prevBulanSelesai.slice(0, 3)})`;
+        } else {
+          pphSebelumnyaUnit.textContent = '(IDR)';
+        }
+      } else {
+        pphSebelumnyaUnit.textContent = '(IDR)';
+      }
     }
 
-    function hitungTarifPasal17(penghasilan) {
-      let pajak = 0;
-      let sisa = penghasilan;
+    function hitungBulanBekerja(bulanMulai, bulanSelesai) {
+      if (!bulanMulai || !bulanSelesai) return 12;
+      const start = bulanList.indexOf(bulanMulai);
+      const end = bulanList.indexOf(bulanSelesai);
+      if (start === -1 || end === -1) return 12;
+      return Math.max(1, end - start + 1);
+    }
+
+    function hitungPPhPasal17(pkp) {
+      let pph = 0;
+      let sisaPKP = pkp;
+      let prevBatas = 0;
+      const breakdown = [];
 
       for (let i = 0; i < tarifPasal17.length; i++) {
-        if (sisa <= 0) break;
-        const potongan = Math.min(sisa, tarifPasal17[i].batas - (i > 0 ? tarifPasal17[i - 1].batas : 0));
-        if (potongan > 0) {
-          pajak += potongan * tarifPasal17[i].tarif;
+        const { batas, tarif } = tarifPasal17[i];
+        const taxable = Math.min(sisaPKP, batas - prevBatas);
+        if (taxable > 0) {
+          const tax = Math.round(taxable * tarif);
+          pph += tax;
+          breakdown.push({
+            batas: Math.round(taxable),
+            tarif: (tarif * 100).toFixed(0) + '%',
+            pajak: tax
+          });
+          sisaPKP -= taxable;
+          prevBatas = batas;
         }
-        sisa -= potongan;
+        if (sisaPKP <= 0) break;
       }
 
-      return Math.floor(pajak); // Round down
+      return { total: pph, breakdown };
     }
 
-    function hitungPendapatanBruto() {
+    function hitungPajakSingle() {
+      const bulanMulai = document.getElementById('bulanMulai').value;
+      const bulanSelesai = document.getElementById('bulanSelesai').value;
       const gaji = parseFloat(document.getElementById('gaji').value) || 0;
       const totalAllowance = parseFloat(document.getElementById('totalAllowance').value) || 0;
       const bpjsKesehatan = parseFloat(document.getElementById('bpjsKesehatan').value) || 0;
       const jkkJkm = parseFloat(document.getElementById('jkkJkm').value) || 0;
+      const jht = parseFloat(document.getElementById('jht').value) || 0;
+      const jp = parseFloat(document.getElementById('jp').value) || 0;
       const overtime = parseFloat(document.getElementById('overtime').value) || 0;
       const bonusThrKomisi = parseFloat(document.getElementById('bonusThrKomisi').value) || 0;
       const adjustment = parseFloat(document.getElementById('adjustment').value) || 0;
       const benefitInKind = parseFloat(document.getElementById('benefitInKind').value) || 0;
-
-      return Math.round(gaji + totalAllowance + bpjsKesehatan + jkkJkm + overtime + bonusThrKomisi + adjustment + benefitInKind);
-    }
-
-    function hitungBiayaJabatan(pendapatan) {
-      const maxBiayaJabatan = 0.05 * pendapatan;
-      return Math.min(maxBiayaJabatan, 6000000); // Maksimum Rp6 juta per tahun
-    }
-
-    function hitungMasaKerja(bulanMulai, bulanSelesai) {
-      const months = {
-        'Januari': 1, 'Februari': 2, 'Maret': 3, 'April': 4,
-        'Mei': 5, 'Juni': 6, 'Juli': 7, 'Agustus': 8,
-        'September': 9, 'Oktober': 10, 'November': 11, 'Desember': 12
-      };
-
-      if (!bulanMulai || !bulanSelesai) return 0;
-      const start = months[bulanMulai];
-      const end = months[bulanSelesai];
-      return end >= start ? end - start + 1 : 12 - start + end + 1;
-    }
-
-    function hitungPajakSingle() {
-      const pendapatan = hitungPendapatanBruto();
       const status = document.getElementById('status').value;
-      const isGrossUp = document.getElementById('grossUp').checked;
-      const bulanMulai = document.getElementById('bulanMulai').value;
-      const bulanSelesai = document.getElementById('bulanSelesai').value;
       const pphSebelumnya = parseFloat(document.getElementById('pphSebelumnya').value) || 0;
-      const jht = parseFloat(document.getElementById('jht').value) || 0;
-      const jp = parseFloat(document.getElementById('jp').value) || 0;
+      const isGrossUp = document.getElementById('grossUp').checked;
       const resultEl = document.getElementById('result');
 
+      if (!bulanMulai) {
+        resultEl.textContent = 'Silakan pilih Bulan Mulai.';
+        return;
+      }
+      if (!bulanSelesai) {
+        resultEl.textContent = 'Silakan pilih Bulan Selesai.';
+        return;
+      }
       if (!status) {
         resultEl.textContent = 'Silakan pilih PTKP.';
         return;
       }
-      if (!bulanMulai || !bulanSelesai) {
-        resultEl.textContent = 'Silakan pilih masa kerja.';
-        return;
-      }
-      if (pendapatan < 0) {
-        resultEl.textContent = 'Pendapatan bruto tidak boleh negatif. Periksa input Anda.';
+      if (gaji < 0 || totalAllowance < 0 || bpjsKesehatan < 0 || jkkJkm < 0 || jht < 0 || jp < 0 || overtime < 0 || bonusThrKomisi < 0 || benefitInKind < 0 || pphSebelumnya < 0) {
+        resultEl.textContent = 'Masukkan nilai positif untuk semua field kecuali Adjustment.';
         return;
       }
 
-      const masaKerja = hitungMasaKerja(bulanMulai, bulanSelesai);
-      const penghasilanPerBulan = pendapatan / masaKerja;
-      const biayaJabatan = hitungBiayaJabatan(pendapatan);
-      const pengurangan = biayaJabatan + jht + jp;
-      const penghasilanNetto = pendapatan - pengurangan;
+      const bulanBekerja = hitungBulanBekerja(bulanMulai, bulanSelesai);
+      const biayaJabatan = 500000 * bulanBekerja;
+      document.getElementById('biayaJabatan').value = biayaJabatan;
+      const totalPengurang = biayaJabatan + jht + jp;
+      const ptkp = ptkpValues[status];
 
-      let ptkp = 0;
-      if (status === 'TK/0') ptkp = 54000000;
-      else if (status === 'TK/1') ptkp = 58500000;
-      else if (status === 'TK/2') ptkp = 63000000;
-      else if (status === 'TK/3') ptkp = 67500000;
-      else if (status === 'K/0') ptkp = 58500000;
-      else if (status === 'K/1') ptkp = 63000000;
-      else if (status === 'K/2') ptkp = 67500000;
-      else if (status === 'K/3') ptkp = 72000000;
+      const brutoTanpaPPh = Math.round(gaji) + Math.round(totalAllowance) + Math.round(bpjsKesehatan) + Math.round(jkkJkm) + Math.round(overtime) + Math.round(bonusThrKomisi) + Math.round(adjustment) + Math.round(benefitInKind);
 
-      const penghasilanKenaPajak = penghasilanNetto - (ptkp * masaKerja / 12);
-      const pajakSebelumnya = pphSebelumnya;
-      let pajakTahunan = penghasilanKenaPajak > 0 ? hitungTarifPasal17(Math.max(0, penghasilanKenaPajak)) : 0;
-      let tunjanganPajak = 0;
-
+      let tunjanganPPh = 0;
       if (isGrossUp) {
-        let low = 0, high = penghasilanKenaPajak * 5, mid, pajakBaru = 0, iter = 0;
-        const tol = 1;
+        let low = 0;
+        let high = brutoTanpaPPh * 5;
+        let iter = 0;
+        const tol = 0.1;
 
         while (iter++ < 100) {
-          mid = (low + high) / 2;
-          const grossUpPenghasilan = penghasilanKenaPajak + mid;
-          pajakBaru = hitungTarifPasal17(Math.max(0, grossUpPenghasilan));
-          if (Math.abs(pajakBaru - mid) <= tol) {
-            tunjanganPajak = mid;
+          const mid = Math.round((low + high) / 2);
+          const bruto = brutoTanpaPPh + mid;
+          const netto = bruto - totalPengurang;
+          const pkp = Math.floor(Math.max(0, netto - ptkp) / 1000) * 1000;
+          const pph = hitungPPhPasal17(pkp).total;
+
+          if (Math.abs(pph - mid) <= tol) {
+            tunjanganPPh = Math.round(mid);
             break;
           }
-          if (pajakBaru > mid) low = mid;
+          if (pph > mid) low = mid;
           else high = mid;
         }
-        pajakTahunan = pajakBaru;
       }
 
-      const pajakTerutang = Math.max(0, pajakTahunan - pajakSebelumnya);
-      document.getElementById('biayaJabatan').value = Math.floor(biayaJabatan);
+      const bruto = brutoTanpaPPh + tunjanganPPh;
+      const netto = bruto - totalPengurang;
+      const nettoJanDes = netto;
+      const pkp = Math.floor(Math.max(0, nettoJanDes - ptkp) / 1000) * 1000;
+      const pphResult = hitungPPhPasal17(pkp);
+      const pphJanDes = pphResult.total;
+      const pphDesember = pphJanDes - pphSebelumnya;
 
-      resultEl.innerHTML =
-        `Pendapatan Bruto\t\t\t: Rp ${pendapatan.toLocaleString('id-ID')}\n` +
-        `Masa Kerja\t\t\t\t: ${masaKerja} bulan\n` +
-        `PTKP\t\t\t\t\t\t: ${status} (Rp ${ptkp.toLocaleString('id-ID')} per tahun)\n` +
-        `Biaya Jabatan\t\t\t\t: Rp ${Math.floor(biayaJabatan).toLocaleString('id-ID')}\n` +
-        `Pengurangan Lain\t\t\t: Rp ${(jht + jp).toLocaleString('id-ID')}\n` +
-        `Penghasilan Netto\t\t\t: Rp ${Math.floor(penghasilanNetto).toLocaleString('id-ID')}\n` +
-        `Penghasilan Kena Pajak\t\t: Rp ${Math.floor(Math.max(0, penghasilanKenaPajak)).toLocaleString('id-ID')}\n` +
-        `PPh Tahunan\t\t\t\t: Rp ${Math.floor(pajakTahunan).toLocaleString('id-ID')}\n` +
-        `PPh Sebelumnya\t\t\t: Rp ${pajakSebelumnya.toLocaleString('id-ID')}\n` +
-        `PPh Terutang\t\t\t\t: <span class="highlight">Rp ${Math.floor(pajakTerutang).toLocaleString('id-ID')}</span>\n` +
-        `Tunjangan Pajak\t\t\t: Rp ${Math.floor(tunjanganPajak).toLocaleString('id-ID')}`;
+      let output = `Perhitungan per Karyawan:\n`;
+      output += `Bruto\t\t\t\t\t\t: Rp ${bruto.toLocaleString('id-ID')}\n`;
+      if (isGrossUp) {
+        output += `Tunjangan PPh\t\t\t\t: Rp ${tunjanganPPh.toLocaleString('id-ID')}\n`;
+      }
+      output += `Pengurang\t\t\t\t\t: Rp ${totalPengurang.toLocaleString('id-ID')}\n`;
+      output += `Penghasilan Neto\t\t\t: Rp ${netto.toLocaleString('id-ID')}\n`;
+      output += `PTKP\t\t\t\t\t\t: Rp ${ptkp.toLocaleString('id-ID')}\n`;
+      output += `PKP\t\t\t\t\t\t\t: Rp ${pkp.toLocaleString('id-ID')}\n`;
+      output += `PPh Pasal 17\t\t\t\t: `;
+      let pphString = '';
+      pphResult.breakdown.forEach((b, index) => {
+        pphString += `(${b.batas.toLocaleString('id-ID')} x ${b.tarif})`;
+        if (index < pphResult.breakdown.length - 1) pphString += ' + ';
+      });
+      output += `${pphString} = Rp ${pphResult.total.toLocaleString('id-ID')}\n`;
+      output += `PPh Jan-Des\t\t\t\t\t: Rp ${pphJanDes.toLocaleString('id-ID')}\n`;
+      const prevBulanSelesai = bulanList[bulanList.indexOf(bulanSelesai) - 1] || bulanSelesai;
+      output += `PPh yang Telah Dipotong (${bulanMulai.slice(0, 3)} - ${prevBulanSelesai.slice(0, 3)}) \t: Rp ${pphSebelumnya.toLocaleString('id-ID')}\n`;
+      output += `PPh Desember\t\t\t\t: <span class="highlight">Rp ${pphDesember.toLocaleString('id-ID')}</span>\n`;
+      resultEl.innerHTML = output;
     }
 
     function validateRow(row, index) {
@@ -515,130 +532,129 @@
       if (!row.Nama || typeof row.Nama !== 'string' || row.Nama.trim() === '') {
         errors.push(`Baris ${index + 1}: Nama tidak valid atau kosong.`);
       }
-      if (!row.Bulan_Mulai || !row.Bulan_Selesai) {
-        errors.push(`Baris ${index + 1}: Masa kerja (Bulan Mulai dan Selesai) harus diisi.`);
+      if (!bulanList.includes(row.Bulan_Mulai)) {
+        errors.push(`Baris ${index + 1}: Bulan_Mulai harus salah satu dari ${bulanList.join(', ')}.`);
       }
-      if (!validPTKP.includes(row.PTKP)) {
-        errors.push(`Baris ${index + 1}: PTKP harus salah satu dari ${validPTKP.join(', ')}.`);
+      if (!bulanList.includes(row.Bulan_Selesai)) {
+        errors.push(`Baris ${index + 1}: Bulan_Selesai harus salah satu dari ${bulanList.join(', ')}.`);
       }
-      const pendapatanFields = ['Gaji', 'Total_Allowance', 'BPJS_Kesehatan', 'JKK_JKM', 'Overtime', 'Bonus_THR_Komisi', 'Adjustment', 'Benefit_in_Kind'];
-      pendapatanFields.forEach(field => {
-        if (!(field in row)) {
-          errors.push(`Baris ${index + 1}: Kolom ${field} tidak ditemukan.`);
-        } else {
-          const value = parseFloat(row[field]);
-          if (isNaN(value)) {
-            errors.push(`Baris ${index + 1}: ${field} bukan angka valid (nilai: '${row[field]}'). Pastikan sel bertipe Number, bukan Text.`);
-          } else if (field !== 'Adjustment' && value < 0) {
-            errors.push(`Baris ${index + 1}: ${field} harus angka positif (nilai: ${value}).`);
-          }
-        }
-      });
-      const penguranganFields = ['JHT', 'JP'];
-      penguranganFields.forEach(field => {
-        if (!(field in row)) {
-          errors.push(`Baris ${index + 1}: Kolom ${field} tidak ditemukan.`);
-        } else {
-          const value = parseFloat(row[field]);
-          if (isNaN(value)) {
-            errors.push(`Baris ${index + 1}: ${field} bukan angka valid (nilai: '${row[field]}').`);
-          } else if (value < 0) {
-            errors.push(`Baris ${index + 1}: ${field} harus angka positif (nilai: ${value}).`);
-          }
-        }
-      });
-      if (!validMetode.includes(row.Metode)) {
-        errors.push(`Baris ${index + 1}: Metode harus 'Gross' atau 'Gross Up'.`);
+      const gaji = parseFloat(row.Gaji_Pokok) || 0;
+      if (gaji < 0) errors.push(`Baris ${index + 1}: Gaji_Pokok harus angka positif (nilai: ${gaji}).`);
+
+      const allowance = parseFloat(row.Total_Allowance) || 0;
+      if (allowance < 0) errors.push(`Baris ${index + 1}: Total_Allowance harus angka positif (nilai: ${allowance}).`);
+
+      const bpjs = parseFloat(row.BPJS_Kesehatan) || 0;
+      if (bpjs < 0) errors.push(`Baris ${index + 1}: BPJS_Kesehatan harus angka positif (nilai: ${bpjs}).`);
+
+      const jkk = parseFloat(row.JKK_JKM) || 0;
+      if (jkk < 0) errors.push(`Baris ${index + 1}: JKK_JKM harus angka positif (nilai: ${jkk}).`);
+
+      const jht = parseFloat(row.JHT) || 0;
+      if (jht < 0) errors.push(`Baris ${index + 1}: JHT harus angka positif (nilai: ${jht}).`);
+
+      const jp = parseFloat(row.JP) || 0;
+      if (jp < 0) errors.push(`Baris ${index + 1}: JP harus angka positif (nilai: ${jp}).`);
+
+      const overtime = parseFloat(row.Overtime) || 0;
+      if (overtime < 0) errors.push(`Baris ${index + 1}: Overtime harus angka positif (nilai: ${overtime}).`);
+
+      const bonus = parseFloat(row.Bonus_THR_Komisi) || 0;
+      if (bonus < 0) errors.push(`Baris ${index + 1}: Bonus_THR_Komisi harus angka positif (nilai: ${bonus}).`);
+
+      const adj = parseFloat(row.Adjustment) || 0;
+      if (isNaN(adj)) errors.push(`Baris ${index + 1}: Adjustment harus angka valid (nilai: ${adj}).`);
+
+      const benefit = parseFloat(row.Benefit_in_Kind) || 0;
+      if (benefit < 0) errors.push(`Baris ${index + 1}: Benefit_in_Kind harus angka positif (nilai: ${benefit}).`);
+
+      if (!ptkpValues.hasOwnProperty(row.PTKP)) {
+        errors.push(`Baris ${index + 1}: PTKP harus salah satu dari ${Object.keys(ptkpValues).join(', ')}.`);
       }
+
+      const pph = parseFloat(row.PPh_Sebelumnya) || 0;
+      if (pph < 0) errors.push(`Baris ${index + 1}: PPh_Sebelumnya harus angka positif (nilai: ${pph}).`);
+
+      if (!('Metode' in row)) {
+        errors.push(`Baris ${index + 1}: Kolom Metode tidak ditemukan.`);
+      } else if (!validMetode.includes(row.Metode)) {
+        errors.push(`Baris ${index + 1}: Metode harus salah satu dari ${validMetode.join(', ')} (nilai: ${row.Metode}).`);
+      }
+
+      // Kolom Catatan JHT & JP boleh kosong atau diisi apa saja, ga perlu validasi
       return errors;
     }
 
     function hitungPajakExcel(row) {
-      const gaji = parseFloat(row.Gaji) || 0;
+      const bulanMulai = row.Bulan_Mulai;
+      const bulanSelesai = row.Bulan_Selesai;
+      const gaji = parseFloat(row.Gaji_Pokok) || 0;
       const totalAllowance = parseFloat(row.Total_Allowance) || 0;
       const bpjsKesehatan = parseFloat(row.BPJS_Kesehatan) || 0;
       const jkkJkm = parseFloat(row.JKK_JKM) || 0;
+      const jht = parseFloat(row.JHT) || 0;
+      const jp = parseFloat(row.JP) || 0;
       const overtime = parseFloat(row.Overtime) || 0;
       const bonusThrKomisi = parseFloat(row.Bonus_THR_Komisi) || 0;
       const adjustment = parseFloat(row.Adjustment) || 0;
       const benefitInKind = parseFloat(row.Benefit_in_Kind) || 0;
-      const jht = parseFloat(row.JHT) || 0;
-      const jp = parseFloat(row.JP) || 0;
+      const status = row.PTKP;
       const pphSebelumnya = parseFloat(row.PPh_Sebelumnya) || 0;
       const isGrossUp = row.Metode === 'Gross Up';
 
-      const pendapatan = Math.round(gaji + totalAllowance + bpjsKesehatan + jkkJkm + overtime + bonusThrKomisi + adjustment + benefitInKind);
-      const bulanMulai = row.Bulan_Mulai;
-      const bulanSelesai = row.Bulan_Selesai;
-      const status = row.PTKP;
+      const bulanBekerja = hitungBulanBekerja(bulanMulai, bulanSelesai);
+      const biayaJabatan = 500000 * bulanBekerja;
+      const totalPengurang = biayaJabatan + jht + jp;
+      const ptkp = ptkpValues[status];
 
-      const masaKerja = hitungMasaKerja(bulanMulai, bulanSelesai);
-      const penghasilanPerBulan = pendapatan / masaKerja;
-      const biayaJabatan = hitungBiayaJabatan(pendapatan);
-      const pengurangan = biayaJabatan + jht + jp;
-      const penghasilanNetto = pendapatan - pengurangan;
+      const brutoTanpaPPh = Math.round(gaji) + Math.round(totalAllowance) + Math.round(bpjsKesehatan) + Math.round(jkkJkm) + Math.round(overtime) + Math.round(bonusThrKomisi) + Math.round(adjustment) + Math.round(benefitInKind);
 
-      let ptkp = 0;
-      if (status === 'TK/0') ptkp = 54000000;
-      else if (status === 'TK/1') ptkp = 58500000;
-      else if (status === 'TK/2') ptkp = 63000000;
-      else if (status === 'TK/3') ptkp = 67500000;
-      else if (status === 'K/0') ptkp = 58500000;
-      else if (status === 'K/1') ptkp = 63000000;
-      else if (status === 'K/2') ptkp = 67500000;
-      else if (status === 'K/3') ptkp = 72000000;
-
-      const penghasilanKenaPajak = penghasilanNetto - (ptkp * masaKerja / 12);
-      const pajakSebelumnya = pphSebelumnya;
-      let pajakTahunan = penghasilanKenaPajak > 0 ? hitungTarifPasal17(Math.max(0, penghasilanKenaPajak)) : 0;
-      let tunjanganPajak = 0;
-
+      let tunjanganPPh = 0;
       if (isGrossUp) {
-        let low = 0, high = penghasilanKenaPajak * 5, mid, pajakBaru = 0, iter = 0;
-        const tol = 1;
+        let low = 0;
+        let high = brutoTanpaPPh * 5;
+        let iter = 0;
+        const tol = 0.1;
 
         while (iter++ < 100) {
-          mid = (low + high) / 2;
-          const grossUpPenghasilan = penghasilanKenaPajak + mid;
-          pajakBaru = hitungTarifPasal17(Math.max(0, grossUpPenghasilan));
-          if (Math.abs(pajakBaru - mid) <= tol) {
-            tunjanganPajak = mid;
+          const mid = Math.round((low + high) / 2);
+          const bruto = brutoTanpaPPh + mid;
+          const netto = bruto - totalPengurang;
+          const pkp = Math.floor(Math.max(0, netto - ptkp) / 1000) * 1000;
+          const pph = hitungPPhPasal17(pkp).total;
+
+          if (Math.abs(pph - mid) <= tol) {
+            tunjanganPPh = Math.round(mid);
             break;
           }
-          if (pajakBaru > mid) low = mid;
+          if (pph > mid) low = mid;
           else high = mid;
         }
-        pajakTahunan = pajakBaru;
       }
 
-      const pajakTerutang = Math.max(0, pajakTahunan - pajakSebelumnya);
+      const bruto = brutoTanpaPPh + tunjanganPPh;
+      const netto = bruto - totalPengurang;
+      const nettoJanDes = netto;
+      const pkp = Math.floor(Math.max(0, nettoJanDes - ptkp) / 1000) * 1000;
+      const pphResult = hitungPPhPasal17(pkp);
+      const pphJanDes = pphResult.total;
+      const pphDesember = pphJanDes - pphSebelumnya;
 
       return {
         Nama: row.Nama,
-        Bulan_Mulai: row.Bulan_Mulai,
-        Bulan_Selesai: row.Bulan_Selesai,
-        PTKP: row.PTKP,
-        Gaji: gaji,
-        Total_Allowance: totalAllowance,
-        BPJS_Kesehatan: bpjsKesehatan,
-        JKK_JKM: jkkJkm,
-        Overtime: overtime,
-        Bonus_THR_Komisi: bonusThrKomisi,
-        Adjustment: adjustment,
-        Benefit_in_Kind: benefitInKind,
-        JHT: jht,
-        JP: jp,
-        PPh_Sebelumnya: pphSebelumnya,
+        Bulan_Mulai: bulanMulai,
+        Bulan_Selesai: bulanSelesai,
         Metode: row.Metode,
-        Pendapatan_Bruto: pendapatan,
-        Masa_Kerja: masaKerja,
-        Biaya_Jabatan: Math.floor(biayaJabatan),
-        Pengurangan_Lain: jht + jp,
-        Penghasilan_Netto: Math.floor(penghasilanNetto),
-        Penghasilan_Kena_Pajak: Math.floor(Math.max(0, penghasilanKenaPajak)),
-        PPh_Tahunan: Math.floor(pajakTahunan),
-        PPh_Terutang: Math.floor(pajakTerutang),
-        Tunjangan_Pajak: Math.floor(tunjanganPajak)
+        Bruto: bruto,
+        Total_Pengurang: totalPengurang,
+        Netto: netto,
+        PTKP: ptkp,
+        PKP: pkp,
+        PPh_Jan_Des: pphJanDes,
+        PPh_Sebelumnya: pphSebelumnya,
+        PPh_Desember: pphDesember,
+        Tunjangan_PPh: tunjanganPPh
+        // Kolom Catatan JHT & JP ga dimasukin ke hasil perhitungan
       };
     }
 
@@ -702,19 +718,12 @@
             return;
           }
 
-          const validHasil = hasil.filter(row => row && typeof row === 'object' && 
-            row.Nama && row.Bulan_Mulai && row.Bulan_Selesai && row.PTKP && 
-            row.Gaji !== undefined && row.Total_Allowance !== undefined && 
-            row.BPJS_Kesehatan !== undefined && row.JKK_JKM !== undefined && 
-            row.Overtime !== undefined && row.Bonus_THR_Komisi !== undefined && 
-            row.Adjustment !== undefined && row.Benefit_in_Kind !== undefined && 
-            row.JHT !== undefined && row.JP !== undefined && 
-            row.PPh_Sebelumnya !== undefined && row.Metode && 
-            row.Pendapatan_Bruto !== undefined && row.Masa_Kerja !== undefined && 
-            row.Biaya_Jabatan !== undefined && row.Pengurangan_Lain !== undefined && 
-            row.Penghasilan_Netto !== undefined && row.Penghasilan_Kena_Pajak !== undefined && 
-            row.PPh_Tahunan !== undefined && row.PPh_Terutang !== undefined && 
-            row.Tunjangan_Pajak !== undefined);
+          const validHasil = hasil.filter(row => row && typeof row === 'object' &&
+            row.Nama && row.Bulan_Mulai && row.Bulan_Selesai && row.Metode &&
+            row.Bruto !== undefined && row.Total_Pengurang !== undefined &&
+            row.Netto !== undefined && row.PTKP && row.PKP !== undefined &&
+            row.PPh_Jan_Des !== undefined && row.PPh_Sebelumnya !== undefined &&
+            row.PPh_Desember !== undefined && row.Tunjangan_PPh !== undefined);
 
           if (validHasil.length !== hasil.length) {
             console.error('Data hasil tidak valid:', hasil);
@@ -724,9 +733,7 @@
 
           console.log('Data hasil untuk ekspor:', validHasil);
 
-          excelResultEl.innerHTML =
-            `Jumlah Karyawan: ${validHasil.length}\n` +
-            `File berhasil diproses. Klik tombol di bawah untuk unduh hasil (format Excel).`;
+          excelResultEl.textContent = 'Perhitungan selesai. Silakan unduh hasilnya.';
 
           const downloadButton = document.createElement('button');
           downloadButton.textContent = 'Download Hasil Perhitungan';
@@ -757,58 +764,82 @@
       }
 
       const headers = [
-        'Nama', 'Bulan_Mulai', 'Bulan_Selesai', 'PTKP', 'Metode', 'Gaji', 'Total_Allowance',
-        'BPJS_Kesehatan', 'JKK_JKM', 'Overtime', 'Bonus_THR_Komisi', 'Adjustment',
-        'Benefit_in_Kind', 'JHT', 'JP', 'PPh_Sebelumnya'
+        'Nama', 'PTKP', 'Metode', 'Bulan_Mulai', 'Bulan_Selesai', 'Gaji_Pokok', 'Total_Allowance',
+        'BPJS_Kesehatan', 'JKK_JKM', 'Overtime', 'Bonus_THR_Komisi', 'Adjustment', 'Benefit_in_Kind',
+        'JHT', 'JP', 'PPh_Sebelumnya', 'Catatan JHT & JP'
       ];
 
       const exampleData = [
         {
           Nama: 'Karyawan1',
-          Bulan_Mulai: 'Januari',
-          Bulan_Selesai: 'Desember',
           PTKP: 'K/1',
           Metode: 'Gross',
-          Gaji: 5000000,
-          Total_Allowance: 2000000,
-          BPJS_Kesehatan: 200000,
-          JKK_JKM: 100000,
-          Overtime: 500000,
-          Bonus_THR_Komisi: 1000000,
-          Adjustment: 100000,
-          Benefit_in_Kind: 300000,
-          JHT: 200000,
-          JP: 150000,
-          PPh_Sebelumnya: 500000
+          Bulan_Mulai: 'Januari',
+          Bulan_Selesai: 'Desember',
+          Gaji_Pokok: 300000000,
+          Total_Allowance: 500000000,
+          BPJS_Kesehatan: 6000000,
+          JKK_JKM: 2000000,
+          Overtime: 15000000,
+          Bonus_THR_Komisi: 20000000,
+          Adjustment: 10000000,
+          Benefit_in_Kind: 5000000,
+          JHT: 8000000,
+          JP: 4000000,
+          PPh_Sebelumnya: 250000000,
+          'Catatan JHT & JP': 'Gausah diisi kalo JHT & JP dijadiin tunjangan kantormu!'
         },
         {
           Nama: 'Karyawan2',
-          Bulan_Mulai: 'Maret',
-          Bulan_Selesai: 'Desember',
           PTKP: 'TK/2',
           Metode: 'Gross Up',
-          Gaji: 6000000,
-          Total_Allowance: 2500000,
-          BPJS_Kesehatan: 250000,
-          JKK_JKM: 120000,
-          Overtime: 600000,
-          Bonus_THR_Komisi: 1200000,
-          Adjustment: 150000,
-          Benefit_in_Kind: 350000,
-          JHT: 250000,
-          JP: 180000,
-          PPh_Sebelumnya: 600000
+          Bulan_Mulai: 'Februari',
+          Bulan_Selesai: 'November',
+          Gaji_Pokok: 250000000,
+          Total_Allowance: 400000000,
+          BPJS_Kesehatan: 5000000,
+          JKK_JKM: 1500000,
+          Overtime: 10000000,
+          Bonus_THR_Komisi: 15000000,
+          Adjustment: 5000000,
+          Benefit_in_Kind: 3000000,
+          JHT: 7000000,
+          JP: 3500000,
+          PPh_Sebelumnya: 200000000,
+          'Catatan JHT & JP': ''
+        },
+        {
+          Nama: 'Karyawan3',
+          PTKP: 'K/0',
+          Metode: 'Gross',
+          Bulan_Mulai: 'Maret',
+          Bulan_Selesai: 'Oktober',
+          Gaji_Pokok: 350000000,
+          Total_Allowance: 600000000,
+          BPJS_Kesehatan: 7000000,
+          JKK_JKM: 2500000,
+          Overtime: 20000000,
+          Bonus_THR_Komisi: 25000000,
+          Adjustment: 15000000,
+          Benefit_in_Kind: 7000000,
+          JHT: 9000000,
+          JP: 4500000,
+          PPh_Sebelumnya: 300000000,
+          'Catatan JHT & JP': ''
         }
       ];
 
       const ws = XLSX.utils.json_to_sheet(exampleData, { header: headers });
 
-      // Atur lebar kolom (opsional)
+      // Kolom Q1 untuk "Catatan JHT & JP"
+      ws['Q1'] = { v: 'Catatan JHT & JP', t: 's' };
+
+      // Atur lebar kolom Q biar teks muat (opsional)
       if (!ws['!cols']) ws['!cols'] = [];
-      ws['!cols'] = headers.map(() => ({ wch: 15 }));
+      ws['!cols'][16] = { wch: 40 }; // Lebar kolom Q disesuaikan
 
       // Pastikan range sheet mencakup semua data
-      if (!ws['!ref']) ws['!ref'] = 'A1:P3';
+      if (!ws['!ref']) ws['!ref'] = 'A1:S5';
 
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Template');
@@ -816,59 +847,40 @@
       XLSX.writeFile(wb, 'template_pph21_desember.xlsx');
     }
 
+    function checkBrowserCompatibility() {
+      if (!window.FileReader) {
+        alert('Browser Anda tidak mendukung operasi file. Silakan gunakan browser modern seperti Chrome, Firefox, atau Edge.');
+        return false;
+      }
+      return true;
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
       const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
       [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
     });
 
+    document.getElementById('bulanMulai').addEventListener('change', () => {
+      updateUnitLabels();
+      hitungPajakSingle();
+    });
+    document.getElementById('bulanSelesai').addEventListener('change', () => {
+      updateUnitLabels();
+      hitungPajakSingle();
+    });
     document.getElementById('gaji').addEventListener('input', hitungPajakSingle);
     document.getElementById('totalAllowance').addEventListener('input', hitungPajakSingle);
     document.getElementById('bpjsKesehatan').addEventListener('input', hitungPajakSingle);
     document.getElementById('jkkJkm').addEventListener('input', hitungPajakSingle);
+    document.getElementById('jht').addEventListener('input', hitungPajakSingle);
+    document.getElementById('jp').addEventListener('input', hitungPajakSingle);
     document.getElementById('overtime').addEventListener('input', hitungPajakSingle);
     document.getElementById('bonusThrKomisi').addEventListener('input', hitungPajakSingle);
     document.getElementById('adjustment').addEventListener('input', hitungPajakSingle);
     document.getElementById('benefitInKind').addEventListener('input', hitungPajakSingle);
-    document.getElementById('jht').addEventListener('input', hitungPajakSingle);
-    document.getElementById('jp').addEventListener('input', hitungPajakSingle);
-    document.getElementById('pphSebelumnya').addEventListener('input', hitungPajakSingle);
-    document.getElementById('bulanMulai').addEventListener('change', hitungPajakSingle);
-    document.getElementById('bulanSelesai').addEventListener('change', hitungPajakSingle);
     document.getElementById('status').addEventListener('change', hitungPajakSingle);
+    document.getElementById('pphSebelumnya').addEventListener('input', hitungPajakSingle);
     document.getElementById('grossUp').addEventListener('change', hitungPajakSingle);
-
-    // Feedback functions
-    document.getElementById('feedbackIcon').addEventListener('click', () => {
-      document.getElementById('feedbackModal').style.display = 'block';
-    });
-
-    function closeFeedback() {
-      document.getElementById('feedbackModal').style.display = 'none';
-    }
-
-    async function submitFeedback() {
-      const feedback = document.getElementById('feedbackText').value;
-      if (!feedback) {
-        alert('Tulis kritik/saran dulu, bro!');
-        return;
-      }
-      try {
-        const res = await fetch(`${API_URL}/feedback`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ feedback })
-        });
-        const data = await res.json();
-        if (res.ok) {
-          alert('Terima kasih atas sarannya!');
-          closeFeedback();
-        } else {
-          alert(data.error || 'Gagal kirim.');
-        }
-      } catch (err) {
-        alert('Error: ' + err.message);
-      }
-    }
   </script>
 </body>
 </html>
