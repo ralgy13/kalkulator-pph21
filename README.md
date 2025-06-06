@@ -1,4 +1,4 @@
-# 🇮🇩 Kalkulator Pajak PPh 21 (Bulanan & Akhir Tahun)
+# Kalkulator Pajak PPh 21 (Bulanan & Akhir Tahun)
 
 Kalkulator berbasis web untuk menghitung pajak penghasilan PPh 21 sesuai regulasi perpajakan Indonesia. Alat ini berguna untuk karyawan, tim HR, dan siapa pun yang ingin mensimulasikan potongan pajak bulanan maupun akhir tahun (atau saat resign).
 
