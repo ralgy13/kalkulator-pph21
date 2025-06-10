@@ -8,7 +8,7 @@ Kalkulator berbasis web untuk menghitung pajak penghasilan PPh 21 sesuai regulas
 - Dukungan penuh status PTKP: TK0, K0, K1, K2, K3
 - Perhitungan bulanan berdasarkan **Tarif Efektif (TER)**
 - Perhitungan akhir tahun / resign menggunakan **Pasal 17 (tarif progresif)**
-- Mode perhitungan **Gross-up** dan **Non gross-up**
+- Mode perhitungan **Gross** dan **Gross-Up**
 - Format angka gaya akuntansi (3 digit, Rp, dll.)
 - Desain responsif dengan **Bootstrap**
 
