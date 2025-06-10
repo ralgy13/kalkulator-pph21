@@ -142,7 +142,6 @@
         font-size: 0.85rem;
       }
     }
-    /* Feedback Icon Style */
     #feedbackIcon {
       position: fixed;
       bottom: 20px;
@@ -530,29 +529,38 @@
       if (!row.Nama || typeof row.Nama !== 'string' || row.Nama.trim() === '') {
         errors.push(`Baris ${index + 1}: Nama tidak valid atau kosong.`);
       }
-      if (!validPTKP.includes(row.PTKP)) {
-        errors.push(`Baris ${index + 1}: PTKP harus salah satu dari ${validPTKP.join(', ')}.`);
+      // Validasi PTKP dengan case-insensitive
+      const ptkpUpper = row.PTKP ? row.PTKP.toUpperCase() : '';
+      if (!validPTKP.map(ptkp => ptkp.toUpperCase()).includes(ptkpUpper)) {
+        errors.push(`Baris ${index + 1}: PTKP harus salah satu dari ${validPTKP.join(', ')} (case-insensitive).`);
       }
       const pendapatanFields = ['Gaji_Pokok', 'Total_Allowance', 'Overtime', 'Adjustment', 'Bonus_THR_Komisi', 'BPJS_Kesehatan', 'JKK_JKM'];
       pendapatanFields.forEach(field => {
         if (!(field in row)) {
-          errors.push(`Baris ${index + 1}: Kolom ${field} tidak ditemukan.`);
+          // Kolom kosong dianggap 0
+          row[field] = '';
         } else {
           const value = parseFloat(row[field]);
-          if (isNaN(value)) {
-            errors.push(`Baris ${index + 1}: ${field} bukan angka valid (nilai: '${row[field]}'). Pastikan sel bertipe Number, bukan Text.`);
+          if (isNaN(value) && row[field] !== '') {
+            errors.push(`Baris ${index + 1}: ${field} bukan angka valid (nilai: '${row[field]}'). Pastikan sel bertipe Number atau kosong.`);
           } else if (field !== 'Adjustment' && value < 0) {
-            errors.push(`Baris ${index + 1}: ${field} harus angka positif (nilai: ${value}).`);
+            errors.push(`Baris ${index + 1}: ${field} harus angka positif atau kosong (nilai: ${value}).`);
           }
         }
       });
-      if (!validMetode.includes(row.Metode)) {
-        errors.push(`Baris ${index + 1}: Metode harus 'Gross' atau 'Gross Up'.`);
+      // Validasi Metode dengan case-insensitive
+      const metodeUpper = row.Metode ? row.Metode.toUpperCase() : '';
+      if (!validMetode.map(metode => metode.toUpperCase()).includes(metodeUpper)) {
+        errors.push(`Baris ${index + 1}: Metode harus 'Gross' atau 'Gross Up' (case-insensitive).`);
       }
       return errors;
     }
 
     function hitungPajakExcel(row) {
+      // Konversi PTKP dan Metode ke format standar (uppercase)
+      row.PTKP = row.PTKP ? row.PTKP.toUpperCase() : row.PTKP;
+      row.Metode = row.Metode ? row.Metode.toUpperCase() : row.Metode;
+
       const gajiPokok = parseFloat(row.Gaji_Pokok) || 0;
       const totalAllowance = parseFloat(row.Total_Allowance) || 0;
       const overtime = parseFloat(row.Overtime) || 0;
@@ -563,7 +571,7 @@
 
       const pendapatan = Math.round(gajiPokok + totalAllowance + overtime + adjustment + bonusThrKomisi + bpjsKesehatan + jkkJkm);
       const status = row.PTKP;
-      const isGrossUp = row.Metode === 'Gross Up';
+      const isGrossUp = row.Metode === 'GROSS UP';
 
       let kategori = '';
       if (['TK/0', 'TK/1', 'K/0'].includes(status)) kategori = 'A';
@@ -751,12 +759,12 @@
           PTKP: 'K/1',
           Metode: 'Gross',
           Gaji_Pokok: 5000000,
-          Total_Allowance: 2000000,
-          Overtime: 500000,
-          Adjustment: 100000,
-          Bonus_THR_Komisi: 1000000,
-          BPJS_Kesehatan: 200000,
-          JKK_JKM: 100000
+          Total_Allowance: '',
+          Overtime: '',
+          Adjustment: '',
+          Bonus_THR_Komisi: '',
+          BPJS_Kesehatan: '',
+          JKK_JKM: ''
         },
         {
           Nama: 'Karyawan2',
@@ -764,23 +772,23 @@
           Metode: 'Gross Up',
           Gaji_Pokok: 6000000,
           Total_Allowance: 2500000,
-          Overtime: 600000,
-          Adjustment: 150000,
-          Bonus_THR_Komisi: 1200000,
-          BPJS_Kesehatan: 250000,
-          JKK_JKM: 120000
+          Overtime: '',
+          Adjustment: '',
+          Bonus_THR_Komisi: '',
+          BPJS_Kesehatan: '',
+          JKK_JKM: ''
         },
         {
           Nama: 'Karyawan3',
           PTKP: 'K/0',
           Metode: 'Gross',
           Gaji_Pokok: 4500000,
-          Total_Allowance: 1800000,
-          Overtime: 400000,
-          Adjustment: 80000,
-          Bonus_THR_Komisi: 900000,
-          BPJS_Kesehatan: 180000,
-          JKK_JKM: 90000
+          Total_Allowance: '',
+          Overtime: '',
+          Adjustment: '',
+          Bonus_THR_Komisi: '',
+          BPJS_Kesehatan: '',
+          JKK_JKM: ''
         }
       ];
 
