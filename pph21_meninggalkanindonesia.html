@@ -164,6 +164,7 @@
                 <option value="September">September</option>
                 <option value="Oktober">Oktober</option>
                 <option value="November">November</option>
+                <option value="Desember">Desember</option>
               </select>
               <span class="me-2">s/d</span>
               <select id="bulanSelesai" class="form-select">
@@ -179,6 +180,7 @@
                 <option value="September">September</option>
                 <option value="Oktober">Oktober</option>
                 <option value="November">November</option>
+                <option value="Desember">Desember</option>
               </select>
             </div>
           </div>
@@ -315,7 +317,7 @@
 
     const bulanList = [
       'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-      'Juli', 'Agustus', 'September', 'Oktober', 'November'
+      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
     ];
 
     function roundToThousands(num) {
@@ -363,11 +365,20 @@
     }
 
     function hitungBulanBekerja(bulanMulai, bulanSelesai) {
-      if (!bulanMulai || !bulanSelesai) return 11; // Maksimum 11 bulan (tanpa Desember)
+      if (!bulanMulai || !bulanSelesai) return 11; // Default 11 bulan
       const start = bulanList.indexOf(bulanMulai);
       const end = bulanList.indexOf(bulanSelesai);
       if (start === -1 || end === -1) return 11;
-      return Math.max(1, end - start + 1);
+      const totalBulan = end - start + 1;
+      // Batasi maksimal 11 bulan
+      if (totalBulan > 11) {
+        return 11;
+      }
+      // Kalo bulan selesai Desember, minimal mulai dari Februari (index 1)
+      if (bulanSelesai === 'Desember' && start < 1) {
+        return 11; // Set ke 11 bulan dari Februari-Desember
+      }
+      return Math.max(1, totalBulan);
     }
 
     function hitungPPhPasal17(pkp) {
@@ -500,6 +511,29 @@
     document.addEventListener('DOMContentLoaded', () => {
       const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
       [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+
+      // Event listener untuk sinkronisasi dropdown
+      const bulanMulai = document.getElementById('bulanMulai');
+      const bulanSelesai = document.getElementById('bulanSelesai');
+
+      bulanSelesai.addEventListener('change', () => {
+        const endIdx = bulanList.indexOf(bulanSelesai.value);
+        if (endIdx === bulanList.length - 1 && bulanMulai.value === 'Januari') { // Kalo Desember dipilih
+          bulanMulai.value = 'Februari'; // Set minimal Februari
+        }
+        updateUnitLabels();
+        hitungPajakSingle();
+      });
+
+      bulanMulai.addEventListener('change', () => {
+        const startIdx = bulanList.indexOf(bulanMulai.value);
+        const endIdx = bulanList.indexOf(bulanSelesai.value);
+        if (endIdx === bulanList.length - 1 && startIdx < 1) { // Kalo Desember dan mulai < Februari
+          bulanMulai.value = 'Februari'; // Set minimal Februari
+        }
+        updateUnitLabels();
+        hitungPajakSingle();
+      });
     });
 
     document.getElementById('bulanMulai').addEventListener('change', () => {
