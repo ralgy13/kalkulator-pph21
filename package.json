@@ -19,6 +19,7 @@
     "mongoose": "^8.15.0",
     "multer": "^2.0.0",
     "nodemailer": "^7.0.3",
-    "xlsx": "^0.18.5"
+    "xlsx": "^0.18.5",
+    "xmlbuilder2": "^3.1.1"
   }
 }

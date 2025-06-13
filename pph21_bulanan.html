@@ -485,7 +485,7 @@
 
       if (!isGrossUp) {
         const tarif = hitungTarifEfektif(pendapatan, kategori);
-        const pajak = Math.floor(pendapatan * tarif); // Round down
+        const pajak = Math.round(pendapatan * tarif); // Round to nearest
         resultEl.innerHTML =
           `Pendapatan Bruto\t\t\t: Rp ${pendapatan.toLocaleString('id-ID')}\n` +
           `PTKP\t\t\t\t\t\t: ${status}\n` +
@@ -502,7 +502,7 @@
         mid = (low + high) / 2;
         const gross = pendapatan + mid;
         const tarif = hitungTarifEfektif(gross, kategori);
-        pajak = Math.floor(gross * tarif); // Round down setiap iterasi
+        pajak = Math.round(gross * tarif); // Round to nearest setiap iterasi
 
         if (Math.abs(pajak - mid) <= tol) {
           allowance = mid;
@@ -513,7 +513,7 @@
       }
 
       const tarif = hitungTarifEfektif(pendapatan + allowance, kategori);
-      const roundedPajak = Math.floor(pajak); // Round down lagi untuk pastiin
+      const roundedPajak = Math.round(pajak); // Round to nearest lagi untuk pastiin
 
       resultEl.innerHTML =
         `Pendapatan Bruto\t\t\t: Rp ${pendapatan.toLocaleString('id-ID')}\n` +
@@ -580,7 +580,7 @@
 
       if (!isGrossUp) {
         const tarif = hitungTarifEfektif(pendapatan, kategori);
-        const pajak = Math.floor(pendapatan * tarif); // Round down
+        const pajak = Math.round(pendapatan * tarif); // Round to nearest
         return {
           Nama: row.Nama,
           PTKP: row.PTKP,
@@ -607,7 +607,7 @@
         mid = (low + high) / 2;
         const gross = pendapatan + mid;
         const tarif = hitungTarifEfektif(gross, kategori);
-        pajak = Math.floor(gross * tarif); // Round down setiap iterasi
+        pajak = Math.round(gross * tarif); // Round to nearest setiap iterasi
 
         if (Math.abs(pajak - mid) <= tol) {
           allowance = mid;
@@ -618,7 +618,7 @@
       }
 
       const tarif = hitungTarifEfektif(pendapatan + allowance, kategori);
-      const roundedPajak = Math.floor(pajak); // Round down lagi untuk pastiin
+      const roundedPajak = Math.round(pajak); // Round to nearest lagi untuk pastiin
 
       return {
         Nama: row.Nama,
