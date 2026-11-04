@@ -458,6 +458,35 @@
       return 0;
     }
 
+    // Gross up TER: cari tunjangan pajak x yang memenuhi x = round(TER(bruto + x) * (bruto + x)).
+    // Karena tarif TER itu "tangga", di dekat batas bracket bisa ada lebih dari satu solusi valid.
+    // Coretax mengambil solusi TERKECIL, jadi kita cek bracket dari bawah ke atas dan ambil yang pertama valid.
+    function hitungGrossUp(pendapatan, kategori) {
+      const list = tarifTER[kategori];
+      for (let i = 0; i < list.length; i++) {
+        const r = list[i].tarif;
+        const bawah = i === 0 ? -1 : list[i - 1].batas; // total harus > batas bawah
+        const atas = list[i].batas;                      // dan <= batas atas
+        const x0 = Math.round(r * pendapatan / (1 - r));
+        for (let x = Math.max(0, x0 - 2); x <= x0 + 2; x++) {
+          const total = pendapatan + x;
+          if (total > bawah && total <= atas && Math.round(total * r) === x) {
+            return { allowance: x, pajak: x };
+          }
+        }
+      }
+      // Cadangan: kalau tidak ada solusi pas (jarang), pakai pencarian biner seperti sebelumnya
+      let low = 0, high = pendapatan * 5, mid, allowance = 0, pajak = 0, iter = 0;
+      while (iter++ < 100) {
+        mid = (low + high) / 2;
+        const gross = pendapatan + mid;
+        pajak = Math.round(gross * hitungTarifEfektif(gross, kategori));
+        if (Math.abs(pajak - mid) <= 1) { allowance = mid; break; }
+        if (pajak > mid) low = mid; else high = mid;
+      }
+      return { allowance, pajak: Math.round(pajak) };
+    }
+
     function hitungPendapatanBruto() {
       const gajiPokok = parseFloat(document.getElementById('gajiPokok').value) || 0;
       const totalAllowance = parseFloat(document.getElementById('totalAllowance').value) || 0;
@@ -503,25 +532,8 @@
         return;
       }
 
-      let low = 0, high = pendapatan * 5, mid, allowance = 0, pajak = 0, iter = 0;
-      const tol = 1;
-
-      while (iter++ < 100) {
-        mid = (low + high) / 2;
-        const gross = pendapatan + mid;
-        const tarif = hitungTarifEfektif(gross, kategori);
-        pajak = Math.round(gross * tarif); // Round to nearest setiap iterasi
-
-        if (Math.abs(pajak - mid) <= tol) {
-          allowance = mid;
-          break;
-        }
-        if (pajak > mid) low = mid;
-        else high = mid;
-      }
-
-      const tarif = hitungTarifEfektif(pendapatan + allowance, kategori);
-      const roundedPajak = Math.round(pajak); // Round to nearest lagi untuk pastiin
+      const { pajak: roundedPajak } = hitungGrossUp(pendapatan, kategori);
+      const tarif = hitungTarifEfektif(pendapatan + roundedPajak, kategori);
       const pendapatanBrutoGrossUp = Math.round(pendapatan + roundedPajak); // Pendapatan Bruto + Tunjangan Pajak
 
       resultEl.innerHTML =
@@ -609,25 +621,8 @@
         };
       }
 
-      let low = 0, high = pendapatan * 5, mid, allowance = 0, pajak = 0, iter = 0;
-      const tol = 1;
-
-      while (iter++ < 100) {
-        mid = (low + high) / 2;
-        const gross = pendapatan + mid;
-        const tarif = hitungTarifEfektif(gross, kategori);
-        pajak = Math.round(gross * tarif); // Round to nearest setiap iterasi
-
-        if (Math.abs(pajak - mid) <= tol) {
-          allowance = mid;
-          break;
-        }
-        if (pajak > mid) low = mid;
-        else high = mid;
-      }
-
-      const tarif = hitungTarifEfektif(pendapatan + allowance, kategori);
-      const roundedPajak = Math.round(pajak); // Round to nearest lagi untuk pastiin
+      const { pajak: roundedPajak } = hitungGrossUp(pendapatan, kategori);
+      const tarif = hitungTarifEfektif(pendapatan + roundedPajak, kategori);
       const pendapatanBrutoGrossUp = Math.round(pendapatan + roundedPajak); // Pendapatan Bruto + Tunjangan Pajak
 
       return {
