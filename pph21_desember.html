@@ -438,6 +438,25 @@
       return { total: pph, breakdown };
     }
 
+    // Gross up tahunan: cari tunjangan PPh x dengan x = PPh(bruto + x).
+    // Biaya jabatan ikut dihitung ulang karena tunjangan PPh termasuk penghasilan bruto.
+    // Iterasi dari 0 selalu naik dan berhenti di solusi TERKECIL (konsisten dengan Coretax di kalkulator bulanan).
+    function hitungGrossUpTahunan(brutoTanpaPPh, brutoRounded, bulanBekerja, jht, jp, ptkp) {
+      const pphUntuk = (x) => {
+        const bj = Math.min(0.05 * (brutoTanpaPPh + x), 500000 * bulanBekerja);
+        const netto = brutoRounded + x - (bj + jht + jp);
+        const pkp = Math.floor(Math.max(0, netto - ptkp) / 1000) * 1000;
+        return hitungPPhPasal17(pkp).total;
+      };
+      let x = 0;
+      for (let i = 0; i < 1000; i++) {
+        const next = pphUntuk(x);
+        if (next === x) return x;
+        x = next;
+      }
+      return x;
+    }
+
     function hitungPajakSingle() {
       const bulanMulai = document.getElementById('bulanMulai').value;
       const bulanSelesai = document.getElementById('bulanSelesai').value;
@@ -475,36 +494,17 @@
 
       const bulanBekerja = hitungBulanBekerja(bulanMulai, bulanSelesai);
       const brutoTanpaPPh = gaji + totalAllowance + bpjsKesehatan + jkkJkm + overtime + bonusThrKomisi + adjustment + benefitInKind;
-      const biayaJabatanPerBulan = Math.min(0.05 * (brutoTanpaPPh / bulanBekerja), 6000000 / 12);
-      const biayaJabatan = biayaJabatanPerBulan * bulanBekerja;
-      document.getElementById('biayaJabatan').value = biayaJabatan;
-      const totalPengurang = biayaJabatan + jht + jp;
       const ptkp = ptkpValues[status];
 
       const brutoTanpaPPhRounded = Math.round(gaji) + Math.round(totalAllowance) + Math.round(bpjsKesehatan) + Math.round(jkkJkm) + Math.round(overtime) + Math.round(bonusThrKomisi) + Math.round(adjustment) + Math.round(benefitInKind);
 
       let tunjanganPPh = 0;
       if (isGrossUp) {
-        let low = 0;
-        let high = brutoTanpaPPhRounded * 5;
-        let iter = 0;
-        const tol = 0.1;
-
-        while (iter++ < 100) {
-          const mid = Math.round((low + high) / 2);
-          const bruto = brutoTanpaPPhRounded + mid;
-          const netto = bruto - totalPengurang;
-          const pkp = Math.floor(Math.max(0, netto - ptkp) / 1000) * 1000;
-          const pph = hitungPPhPasal17(pkp).total;
-
-          if (Math.abs(pph - mid) <= tol) {
-            tunjanganPPh = Math.round(mid);
-            break;
-          }
-          if (pph > mid) low = mid;
-          else high = mid;
-        }
+        tunjanganPPh = hitungGrossUpTahunan(brutoTanpaPPh, brutoTanpaPPhRounded, bulanBekerja, jht, jp, ptkp);
       }
+      const biayaJabatan = Math.min(0.05 * (brutoTanpaPPh + tunjanganPPh), 500000 * bulanBekerja);
+      document.getElementById('biayaJabatan').value = biayaJabatan;
+      const totalPengurang = biayaJabatan + jht + jp;
 
       const bruto = brutoTanpaPPhRounded + tunjanganPPh;
       const netto = bruto - totalPengurang;
@@ -614,35 +614,16 @@
 
       const bulanBekerja = hitungBulanBekerja(bulanMulai, bulanSelesai);
       const brutoTanpaPPh = gaji + totalAllowance + bpjsKesehatan + jkkJkm + overtime + bonusThrKomisi + adjustment + benefitInKind;
-      const biayaJabatanPerBulan = Math.min(0.05 * (brutoTanpaPPh / bulanBekerja), 6000000 / 12);
-      const biayaJabatan = biayaJabatanPerBulan * bulanBekerja;
-      const totalPengurang = biayaJabatan + jht + jp;
       const ptkp = ptkpValues[status];
 
       const brutoTanpaPPhRounded = Math.round(gaji) + Math.round(totalAllowance) + Math.round(bpjsKesehatan) + Math.round(jkkJkm) + Math.round(overtime) + Math.round(bonusThrKomisi) + Math.round(adjustment) + Math.round(benefitInKind);
 
       let tunjanganPPh = 0;
       if (isGrossUp) {
-        let low = 0;
-        let high = brutoTanpaPPhRounded * 5;
-        let iter = 0;
-        const tol = 0.1;
-
-        while (iter++ < 100) {
-          const mid = Math.round((low + high) / 2);
-          const bruto = brutoTanpaPPhRounded + mid;
-          const netto = bruto - totalPengurang;
-          const pkp = Math.floor(Math.max(0, netto - ptkp) / 1000) * 1000;
-          const pph = hitungPPhPasal17(pkp).total;
-
-          if (Math.abs(pph - mid) <= tol) {
-            tunjanganPPh = Math.round(mid);
-            break;
-          }
-          if (pph > mid) low = mid;
-          else high = mid;
-        }
+        tunjanganPPh = hitungGrossUpTahunan(brutoTanpaPPh, brutoTanpaPPhRounded, bulanBekerja, jht, jp, ptkp);
       }
+      const biayaJabatan = Math.min(0.05 * (brutoTanpaPPh + tunjanganPPh), 500000 * bulanBekerja);
+      const totalPengurang = biayaJabatan + jht + jp;
 
       const bruto = brutoTanpaPPhRounded + tunjanganPPh;
       const netto = bruto - totalPengurang;
