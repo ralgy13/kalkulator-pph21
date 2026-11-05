@@ -274,12 +274,24 @@
             <label class="form-label" for="jp">JP <span id="jpUnit">(IDR)</span><span class="toggle-tooltip" data-bs-toggle="tooltip" data-bs-placement="right" title="Kalo JP kamu menjadi tunjangan kantor, ga usah diisi ya !"><i class="bi bi-info-circle"></i></span>:</label>
             <input type="number" id="jp" min="0" step="1" placeholder="" class="form-control" />
           </div>
+          <div class="input-group">
+            <label class="form-label" for="zakat">Zakat <span id="zakatUnit">(IDR)</span><span class="toggle-tooltip" data-bs-toggle="tooltip" data-bs-placement="right" title="Zakat/sumbangan keagamaan wajib yang dibayar lewat kantor. Kosongkan kalau tidak ada."><i class="bi bi-info-circle"></i></span>:</label>
+            <input type="number" id="zakat" min="0" step="1" placeholder="" class="form-control" />
+          </div>
         </div>
       </div>
       <!-- Full-width inputs -->
       <div class="input-group">
         <label class="form-label" for="pphSebelumnya">PPh yang Telah Dipotong <span id="pphSebelumnyaUnit">(IDR)</span>:</label>
         <input type="number" id="pphSebelumnya" min="0" step="1" placeholder="" class="form-control" />
+      </div>
+      <div class="input-group">
+        <label class="form-label" for="netoSebelumnya">Penghasilan Neto dari Pemberi Kerja Sebelumnya (IDR)<span class="toggle-tooltip" data-bs-toggle="tooltip" data-bs-placement="right" title="Diisi kalau karyawan pindahan di tahun yang sama dan membawa bukti potong A1 dari kantor lama. Ambil angka penghasilan neto dari A1 tersebut."><i class="bi bi-info-circle"></i></span>:</label>
+        <input type="number" id="netoSebelumnya" min="0" step="1" placeholder="" class="form-control" />
+      </div>
+      <div class="input-group">
+        <label class="form-label" for="pphPemberiKerjaSebelumnya">PPh yang Telah Dipotong Pemberi Kerja Sebelumnya (IDR):</label>
+        <input type="number" id="pphPemberiKerjaSebelumnya" min="0" step="1" placeholder="" class="form-control" />
       </div>
       <div class="form-check">
         <input type="checkbox" id="grossUp" class="form-check-input" />
@@ -377,6 +389,7 @@
         { id: 'jkkJkmUnit', default: 'IDR' },
         { id: 'jhtUnit', default: 'IDR' },
         { id: 'jpUnit', default: 'IDR' },
+        { id: 'zakatUnit', default: 'IDR' },
         { id: 'overtimeUnit', default: 'IDR' },
         { id: 'bonusThrKomisiUnit', default: 'IDR' },
         { id: 'adjustmentUnit', default: 'IDR' },
@@ -442,12 +455,13 @@
     // Gross up tahunan: cari tunjangan PPh x dengan x = PPh(bruto + x).
     // Biaya jabatan ikut dihitung ulang karena tunjangan PPh termasuk penghasilan bruto.
     // Iterasi dari 0 selalu naik dan berhenti di solusi TERKECIL (konsisten dengan Coretax di kalkulator bulanan).
-    function hitungGrossUpTahunan(brutoTanpaPPh, brutoRounded, bulanBekerja, jht, jp, ptkp) {
+    function hitungGrossUpTahunan(brutoTanpaPPh, brutoRounded, bulanBekerja, jht, jp, zakat, ptkp, netoSebelumnya, pphPemberiKerjaSebelumnya) {
       const pphUntuk = (x) => {
         const bj = Math.min(0.05 * (brutoTanpaPPh + x), 500000 * bulanBekerja);
-        const netto = brutoRounded + x - (bj + jht + jp);
-        const pkp = Math.floor(Math.max(0, netto - ptkp) / 1000) * 1000;
-        return hitungPPhPasal17(pkp).total;
+        const netto = brutoRounded + x - (bj + jht + jp + zakat);
+        const pkp = Math.floor(Math.max(0, netto + netoSebelumnya - ptkp) / 1000) * 1000;
+        // Tunjangan = pajak yang jadi tanggungan pemberi kerja ini (total pajak setahun dikurangi yang sudah ditanggung pemberi kerja sebelumnya)
+        return Math.max(0, hitungPPhPasal17(pkp).total - pphPemberiKerjaSebelumnya);
       };
       let x = 0;
       for (let i = 0; i < 1000; i++) {
@@ -473,6 +487,9 @@
       const benefitInKind = parseFloat(document.getElementById('benefitInKind').value) || 0;
       const status = document.getElementById('status').value;
       const pphSebelumnya = parseFloat(document.getElementById('pphSebelumnya').value) || 0;
+      const zakat = parseFloat(document.getElementById('zakat').value) || 0;
+      const netoSebelumnya = parseFloat(document.getElementById('netoSebelumnya').value) || 0;
+      const pphPemberiKerjaSebelumnya = parseFloat(document.getElementById('pphPemberiKerjaSebelumnya').value) || 0;
       const isGrossUp = document.getElementById('grossUp').checked;
       const resultEl = document.getElementById('result');
 
@@ -488,7 +505,7 @@
         resultEl.textContent = 'Silakan pilih PTKP.';
         return;
       }
-      if (gaji < 0 || totalAllowance < 0 || bpjsKesehatan < 0 || jkkJkm < 0 || jht < 0 || jp < 0 || overtime < 0 || bonusThrKomisi < 0 || benefitInKind < 0 || pphSebelumnya < 0) {
+      if (gaji < 0 || totalAllowance < 0 || bpjsKesehatan < 0 || jkkJkm < 0 || jht < 0 || jp < 0 || overtime < 0 || bonusThrKomisi < 0 || benefitInKind < 0 || pphSebelumnya < 0 || zakat < 0 || netoSebelumnya < 0 || pphPemberiKerjaSebelumnya < 0) {
         resultEl.textContent = 'Masukkan nilai positif untuk semua field kecuali Adjustment.';
         return;
       }
@@ -501,19 +518,19 @@
 
       let tunjanganPPh = 0;
       if (isGrossUp) {
-        tunjanganPPh = hitungGrossUpTahunan(brutoTanpaPPh, brutoTanpaPPhRounded, bulanBekerja, jht, jp, ptkp);
+        tunjanganPPh = hitungGrossUpTahunan(brutoTanpaPPh, brutoTanpaPPhRounded, bulanBekerja, jht, jp, zakat, ptkp, netoSebelumnya, pphPemberiKerjaSebelumnya);
       }
       const biayaJabatan = Math.min(0.05 * (brutoTanpaPPh + tunjanganPPh), 500000 * bulanBekerja);
       document.getElementById('biayaJabatan').value = biayaJabatan;
-      const totalPengurang = biayaJabatan + jht + jp;
+      const totalPengurang = biayaJabatan + jht + jp + zakat;
 
       const bruto = brutoTanpaPPhRounded + tunjanganPPh;
       const netto = bruto - totalPengurang;
-      const nettoJanDes = netto;
+      const nettoJanDes = netto + netoSebelumnya;
       const pkp = Math.floor(Math.max(0, nettoJanDes - ptkp) / 1000) * 1000;
       const pphResult = hitungPPhPasal17(pkp);
       const pphJanDes = pphResult.total;
-      const pphDesember = pphJanDes - pphSebelumnya;
+      const pphDesember = pphJanDes - pphSebelumnya - pphPemberiKerjaSebelumnya;
 
       let output = `Perhitungan per Karyawan:\n`;
       output += `Bruto\t\t\t\t\t\t: Rp ${bruto.toLocaleString('id-ID')}\n`;
@@ -522,6 +539,10 @@
       }
       output += `Pengurang\t\t\t\t\t: Rp ${totalPengurang.toLocaleString('id-ID')}\n`;
       output += `Penghasilan Neto\t\t\t: Rp ${netto.toLocaleString('id-ID')}\n`;
+      if (netoSebelumnya > 0) {
+        output += `Neto Pemberi Kerja Sebelumnya\t: Rp ${netoSebelumnya.toLocaleString('id-ID')}\n`;
+        output += `Penghasilan Neto Setahun\t\t: Rp ${nettoJanDes.toLocaleString('id-ID')}\n`;
+      }
       output += `PTKP\t\t\t\t\t\t: Rp ${ptkp.toLocaleString('id-ID')}\n`;
       output += `PKP\t\t\t\t\t\t\t: Rp ${pkp.toLocaleString('id-ID')}\n`;
       output += `PPh Pasal 17\t\t\t\t: `;
@@ -534,6 +555,9 @@
       output += `PPh Jan-Des\t\t\t\t\t: Rp ${pphJanDes.toLocaleString('id-ID')}\n`;
       const prevBulanSelesai = bulanList[bulanList.indexOf(bulanSelesai) - 1] || bulanSelesai;
       output += `PPh yang Telah Dipotong (${bulanMulai.slice(0, 3)} - ${prevBulanSelesai.slice(0, 3)}) \t: Rp ${pphSebelumnya.toLocaleString('id-ID')}\n`;
+      if (pphPemberiKerjaSebelumnya > 0) {
+        output += `PPh Dipotong Pemberi Kerja Sebelumnya\t: Rp ${pphPemberiKerjaSebelumnya.toLocaleString('id-ID')}\n`;
+      }
       output += `PPh Desember\t\t\t\t: <span class="highlight">Rp ${pphDesember.toLocaleString('id-ID')}</span>\n`;
       resultEl.innerHTML = output;
     }
@@ -586,6 +610,12 @@
       const pph = parseFloat(row.PPh_Sebelumnya) || 0;
       if (pph < 0) errors.push(`Baris ${index + 1}: PPh_Sebelumnya harus angka positif (nilai: ${pph}).`);
 
+      // Kolom opsional: kosong dianggap 0
+      ['Zakat', 'Neto_Pemberi_Kerja_Sebelumnya', 'PPh_Pemberi_Kerja_Sebelumnya'].forEach(k => {
+        const v = parseFloat(row[k]) || 0;
+        if (v < 0) errors.push(`Baris ${index + 1}: ${k} harus angka positif (nilai: ${v}).`);
+      });
+
       if (!('Metode' in row)) {
         errors.push(`Baris ${index + 1}: Kolom Metode tidak ditemukan.`);
       } else if (!validMetode.includes(row.Metode)) {
@@ -611,6 +641,9 @@
       const benefitInKind = parseFloat(row.Benefit_in_Kind) || 0;
       const status = row.PTKP;
       const pphSebelumnya = parseFloat(row.PPh_Sebelumnya) || 0;
+      const zakat = parseFloat(row.Zakat) || 0;
+      const netoSebelumnya = parseFloat(row.Neto_Pemberi_Kerja_Sebelumnya) || 0;
+      const pphPemberiKerjaSebelumnya = parseFloat(row.PPh_Pemberi_Kerja_Sebelumnya) || 0;
       const isGrossUp = row.Metode === 'Gross Up';
 
       const bulanBekerja = hitungBulanBekerja(bulanMulai, bulanSelesai);
@@ -621,18 +654,18 @@
 
       let tunjanganPPh = 0;
       if (isGrossUp) {
-        tunjanganPPh = hitungGrossUpTahunan(brutoTanpaPPh, brutoTanpaPPhRounded, bulanBekerja, jht, jp, ptkp);
+        tunjanganPPh = hitungGrossUpTahunan(brutoTanpaPPh, brutoTanpaPPhRounded, bulanBekerja, jht, jp, zakat, ptkp, netoSebelumnya, pphPemberiKerjaSebelumnya);
       }
       const biayaJabatan = Math.min(0.05 * (brutoTanpaPPh + tunjanganPPh), 500000 * bulanBekerja);
-      const totalPengurang = biayaJabatan + jht + jp;
+      const totalPengurang = biayaJabatan + jht + jp + zakat;
 
       const bruto = brutoTanpaPPhRounded + tunjanganPPh;
       const netto = bruto - totalPengurang;
-      const nettoJanDes = netto;
+      const nettoJanDes = netto + netoSebelumnya;
       const pkp = Math.floor(Math.max(0, nettoJanDes - ptkp) / 1000) * 1000;
       const pphResult = hitungPPhPasal17(pkp);
       const pphJanDes = pphResult.total;
-      const pphDesember = pphJanDes - pphSebelumnya;
+      const pphDesember = pphJanDes - pphSebelumnya - pphPemberiKerjaSebelumnya;
 
       return {
         Nama: row.Nama,
@@ -646,6 +679,9 @@
         PKP: pkp,
         PPh_Jan_Des: pphJanDes,
         PPh_Sebelumnya: pphSebelumnya,
+        Zakat: zakat,
+        Neto_Pemberi_Kerja_Sebelumnya: netoSebelumnya,
+        PPh_Pemberi_Kerja_Sebelumnya: pphPemberiKerjaSebelumnya,
         PPh_Desember: pphDesember,
         Tunjangan_PPh: tunjanganPPh
         // Kolom Catatan JHT & JP ga dimasukin ke hasil perhitungan
@@ -761,7 +797,8 @@
       const headers = [
         'Nama', 'PTKP', 'Metode', 'Bulan_Mulai', 'Bulan_Selesai', 'Gaji_Pokok', 'Total_Allowance',
         'BPJS_Kesehatan', 'JKK_JKM', 'Overtime', 'Bonus_THR_Komisi', 'Adjustment', 'Benefit_in_Kind',
-        'JHT', 'JP', 'PPh_Sebelumnya', 'Catatan JHT & JP'
+        'JHT', 'JP', 'PPh_Sebelumnya', 'Catatan JHT & JP',
+        'Zakat', 'Neto_Pemberi_Kerja_Sebelumnya', 'PPh_Pemberi_Kerja_Sebelumnya'
       ];
 
       const exampleData = [
@@ -782,7 +819,10 @@
           JHT: 8000000,
           JP: 4000000,
           PPh_Sebelumnya: 250000000,
-          'Catatan JHT & JP': 'Gausah diisi kalo JHT & JP dijadiin tunjangan kantormu!'
+          'Catatan JHT & JP': 'Gausah diisi kalo JHT & JP dijadiin tunjangan kantormu!',
+          Zakat: 0,
+          Neto_Pemberi_Kerja_Sebelumnya: 0,
+          PPh_Pemberi_Kerja_Sebelumnya: 0
         },
         {
           Nama: 'Karyawan2',
@@ -801,7 +841,10 @@
           JHT: 7000000,
           JP: 3500000,
           PPh_Sebelumnya: 200000000,
-          'Catatan JHT & JP': ''
+          'Catatan JHT & JP': '',
+          Zakat: 0,
+          Neto_Pemberi_Kerja_Sebelumnya: 0,
+          PPh_Pemberi_Kerja_Sebelumnya: 0
         },
         {
           Nama: 'Karyawan3',
@@ -820,7 +863,10 @@
           JHT: 9000000,
           JP: 4500000,
           PPh_Sebelumnya: 300000000,
-          'Catatan JHT & JP': ''
+          'Catatan JHT & JP': '',
+          Zakat: 1200000,
+          Neto_Pemberi_Kerja_Sebelumnya: 0,
+          PPh_Pemberi_Kerja_Sebelumnya: 0
         }
       ];
 
@@ -831,7 +877,9 @@
 
       // Atur lebar kolom Q biar teks muat (opsional)
       if (!ws['!cols']) ws['!cols'] = [];
-      ws['!cols'][16] = { wch: 40 }; // Lebar kolom Q disesuaikan
+      ws['!cols'][16] = { wch: 40 };
+      ws['!cols'][18] = { wch: 28 };
+      ws['!cols'][19] = { wch: 30 }; // Lebar kolom Q disesuaikan
 
       // Pastikan range sheet mencakup semua data
       if (!ws['!ref']) ws['!ref'] = 'A1:S5';
@@ -875,6 +923,9 @@
     document.getElementById('benefitInKind').addEventListener('input', hitungPajakSingle);
     document.getElementById('status').addEventListener('change', hitungPajakSingle);
     document.getElementById('pphSebelumnya').addEventListener('input', hitungPajakSingle);
+    document.getElementById('zakat').addEventListener('input', hitungPajakSingle);
+    document.getElementById('netoSebelumnya').addEventListener('input', hitungPajakSingle);
+    document.getElementById('pphPemberiKerjaSebelumnya').addEventListener('input', hitungPajakSingle);
     document.getElementById('grossUp').addEventListener('change', hitungPajakSingle);
   </script>
 </body>
